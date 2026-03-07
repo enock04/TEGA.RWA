@@ -22,7 +22,7 @@ export default function MainLayout({ children, showNav = true }: { children: Rea
 
   return (
     <div className="app-shell">
-      <div className="page-content">
+      <div className={showNav ? 'page-content' : 'page-content-no-nav'}>
         {children}
       </div>
       {showNav && <BottomNav />}

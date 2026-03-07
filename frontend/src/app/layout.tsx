@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
 import './globals.css';
 
@@ -7,9 +8,9 @@ export const metadata: Metadata = {
   description: 'Book inter-provincial bus tickets in Rwanda quickly and securely.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>
         {children}
         <Toaster

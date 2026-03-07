@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.replace('/dashboard');
+    if (isAuthenticated) router.replace('/search');
   }, [isAuthenticated, router]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({

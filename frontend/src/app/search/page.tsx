@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -11,7 +11,18 @@ import EmptyState from '@/components/ui/EmptyState';
 import { stationsApi, routesApi } from '@/lib/api';
 import { Station, Schedule } from '@/types';
 
+interface Coords { lat: number; lon: number; }
+const KIGALI: Coords = { lat: -1.9441, lon: 30.0619 };
+
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<MainLayout><div className="flex items-center justify-center py-20"><Spinner /></div></MainLayout>}>
+      <SearchContent />
+    </Suspense>
+  );
+}
+
+function SearchContent() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -20,6 +31,8 @@ export default function SearchPage() {
   const [loadingStations, setLoadingStations] = useState(true);
   const [loadingResults, setLoadingResults] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [locError, setLocError] = useState(false);
 
   const [form, setForm] = useState({
     departureStationId: params.get('from') || '',
@@ -32,6 +45,15 @@ export default function SearchPage() {
       .then(res => setStations(res.data.data.stations))
       .catch(() => toast.error('Failed to load stations'))
       .finally(() => setLoadingStations(false));
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.geolocation) { setCoords(KIGALI); return; }
+    navigator.geolocation.getCurrentPosition(
+      (p) => setCoords({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => { setLocError(true); setCoords(KIGALI); },
+      { timeout: 8000 }
+    );
   }, []);
 
   useEffect(() => {
@@ -78,15 +100,15 @@ export default function SearchPage() {
       <AppHeader title="Find a Bus" />
 
       {/* Search form */}
-      <div className="bg-blue-700 px-4 pt-4 pb-5">
+      <div className="bg-gray-900 px-4 pt-4 pb-5 border-b border-gray-800">
         {loadingStations ? (
-          <div className="flex items-center justify-center py-6 gap-2 text-blue-200">
+          <div className="flex items-center justify-center py-6 gap-2 text-gray-400">
             <Spinner size="sm" /> <span className="text-sm">Loading stations...</span>
           </div>
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-blue-200 font-semibold uppercase tracking-wide mb-1 block">From</label>
+              <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">From</label>
               <select
                 title="Departure station"
                 className="input-field"
@@ -102,7 +124,7 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="text-xs text-blue-200 font-semibold uppercase tracking-wide mb-1 block">To</label>
+              <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">To</label>
               <select
                 title="Destination station"
                 className="input-field"
@@ -119,7 +141,7 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="text-xs text-blue-200 font-semibold uppercase tracking-wide mb-1 block">Travel Date</label>
+              <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">Travel Date</label>
               <input
                 type="date"
                 title="Travel date"
@@ -135,7 +157,7 @@ export default function SearchPage() {
               type="button"
               onClick={handleSearch}
               disabled={loadingResults}
-              className="btn-primary w-full flex items-center justify-center gap-2 bg-white text-blue-700 font-bold py-3.5 hover:bg-blue-50"
+              className="btn-primary w-full flex items-center justify-center gap-2 bg-white text-gray-900 font-bold py-3.5 hover:bg-gray-100"
             >
               {loadingResults ? <Spinner size="sm" /> : (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,6 +169,41 @@ export default function SearchPage() {
           </div>
         )}
       </div>
+
+      {/* Map — shown before any search */}
+      {!searched && !loadingResults && (() => {
+        const mc = coords ?? KIGALI;
+        const d = 0.06;
+        const bbox = `${mc.lon - d},${mc.lat - d},${mc.lon + d},${mc.lat + d}`;
+        const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${mc.lat},${mc.lon}`;
+        return (
+          <div className="relative bg-gray-100 dark:bg-gray-800">
+            <div className="absolute top-2 left-0 right-0 flex justify-center z-10 pointer-events-none">
+              <div className="bg-white dark:bg-gray-900 bg-opacity-90 rounded-full px-3 py-1 flex items-center gap-1.5 shadow text-xs text-gray-600 dark:text-gray-300 font-medium">
+                <svg className="w-3 h-3 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                {!coords ? 'Locating you…' : locError ? 'Kigali, Rwanda (default)' : 'Your location'}
+              </div>
+            </div>
+            {coords ? (
+              <iframe
+                src={src}
+                title="Your location"
+                className="w-full h-48 border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-full h-48 flex items-center justify-center">
+                <svg className="w-6 h-6 animate-pulse text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Results */}
       <div className="px-4 py-5">
@@ -195,7 +252,7 @@ export default function SearchPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-blue-700 font-bold text-base">RWF {Number(s.base_price).toLocaleString()}</p>
+                      <p className="text-white font-bold text-base">RWF {Number(s.base_price).toLocaleString()}</p>
                       <button
                         type="button"
                         onClick={() => router.push(`/booking/${s.schedule_id}`)}

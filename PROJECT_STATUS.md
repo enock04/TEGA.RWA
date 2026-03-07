@@ -1,6 +1,22 @@
-Status: In Progress — Backend Phases 1–4 complete; frontend fully redesigned as mobile app with auth gate; ticket API and admin dashboard API remain.
+Status: Running in Docker — All three containers healthy. Backend Phases 1–4 complete; frontend fully redesigned as mobile app; Docker deployment working. Ticket API and admin dashboard API remain.
 
-Key Achievements:
+**📖 See [SETUP_GUIDE.md](SETUP_GUIDE.md) for complete installation and configuration instructions.**
+
+## Running the App
+
+```bash
+docker compose up --build
+```
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:5000/api/v1
+- **API Docs (Swagger)**: http://localhost:5000/api/v1/docs
+- **PostgreSQL**: localhost:5432
+
+All services start automatically. Schema and seed data are applied on first boot.
+
+## Key Achievements
+
 - Project directory structure established for both backend (Node.js/Express) and frontend (Next.js)
 - Backend configuration complete: PostgreSQL connection pool, Swagger/OpenAPI setup, Winston logger, standardized response helpers
 - Middleware layer implemented: JWT authentication, role-based access control (passenger / agency / admin), request validation, and global error handling
@@ -8,17 +24,19 @@ Key Achievements:
 - Phase 2 (Search & Transport): Stations, Routes, Buses, and Schedules modules complete with full CRUD and the core bus search endpoint (search by departure station, destination, and travel date)
 - Phase 3 (Bookings): Seat booking with PostgreSQL row-level locking, 15-minute expiry, cancellation with seat restoration, and admin booking list
 - Phase 4 (Payments): Full payment lifecycle — initiate, confirm, and webhook handler for MTN MoMo and Airtel Money (mock); booking auto-confirmed on payment success
-- Frontend (Next.js + Tailwind CSS): All passenger and admin pages built
+- Frontend (Next.js + Tailwind CSS): All passenger and admin pages built with accessibility attributes
 - Mobile App Redesign: Phone-frame shell (max-width 430px), sticky AppHeader with backHref support, fixed BottomNav, rounded-2xl inputs/buttons/cards across all pages
-- Auth Gate: Root page (/) is now a branded splash screen — unauthenticated users see Sign In / Create Account; authenticated users are auto-redirected to /dashboard. Login and register pages also redirect authenticated users away to /dashboard.
+- Auth Gate: Root page (/) is branded splash screen — unauthenticated users see Sign In / Create Account; authenticated users auto-redirected to /dashboard
+- App Rename: All references updated from IBTRS → TEGA.Rw across frontend, backend, docker-compose, env files
+- Docker Deployment (March 7, 2026): Full stack containerised — postgres:15-alpine DB, Node.js backend, Next.js standalone frontend; all three containers healthy and communicating
 
-Challenges:
+## Known Remaining Issues
+
 - MTN MoMo and Airtel Money providers are mocked — real sandbox credentials required before live payment testing
 - Backend tickets module not yet wired — ticket page will return errors until Phase 5 is complete
 - Backend admin module not yet built — admin pages will return errors until Phase 6 is complete
-- PostgreSQL must be running (Docker or local install) before any data endpoints work
 
-Next Steps:
+## Progress
 
 [x] Phase 1 — Auth & Users
 [x] Phase 2 — Search & Transport (Stations, Routes, Buses, Schedules)
@@ -27,6 +45,8 @@ Next Steps:
 [x] Frontend — Next.js + Tailwind CSS (all pages)
 [x] Mobile App Redesign — Phone frame, BottomNav, AppHeader, all pages rewritten
 [x] Auth Gate — Splash screen at /, auth redirects for authenticated users
+[x] App Rename — IBTRS → TEGA.Rw across all files
+[x] Infrastructure — Docker Compose with postgres, backend, frontend; fully working
 
 [ ] Phase 5 — Tickets API
     - Replace tickets.routes.js stub with real routes
@@ -37,6 +57,3 @@ Next Steps:
     - Build admin.service.js and admin.controller.js
     - Replace admin.routes.js stub with real endpoints
     - Dashboard stats, revenue reports, booking reports, agency management
-
-[ ] Infrastructure
-    - Docker/docker-compose already written — install Docker Desktop and run: docker compose up --build
