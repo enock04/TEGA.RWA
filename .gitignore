@@ -28,6 +28,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Claude Code
+.claude/
+
 # Package lock files (keep package.json, ignore locks if preferred)
 # package-lock.json
 # yarn.lock
