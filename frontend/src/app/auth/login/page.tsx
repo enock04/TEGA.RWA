@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.replace('/search');
+    if (isAuthenticated) router.replace('/');
   }, [isAuthenticated, router]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -43,7 +43,7 @@ export default function LoginPage() {
       if (user.role === 'admin' || user.role === 'agency') {
         router.push('/admin');
       } else {
-        router.push('/search');
+        router.push('/');
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed. Please try again.');
@@ -59,15 +59,15 @@ export default function LoginPage() {
       <div className="px-5 pt-6 pb-10">
         {/* Logo area */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-gray-800 border border-gray-700 rounded-2xl flex items-center justify-center">
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
           </div>
           <div>
-            <p className="font-bold text-gray-900 text-lg leading-tight">Welcome back</p>
-            <p className="text-gray-500 text-sm">Sign in to your account</p>
+            <p className="font-bold text-white text-lg leading-tight">Welcome back</p>
+            <p className="text-gray-400 text-sm">Sign in to your account</p>
           </div>
         </div>
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center space-y-3">
           <p className="text-sm text-gray-500">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/register" className="text-blue-600 font-semibold">
+            <Link href="/auth/register" className="text-white font-semibold underline underline-offset-2">
               Create one
             </Link>
           </p>

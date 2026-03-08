@@ -60,27 +60,27 @@ export default function DashboardPage() {
       <AppHeader
         title="My Trips"
         right={
-          <Link href="/search" className="text-sm font-semibold text-blue-600">+ Book</Link>
+          <Link href="/search" className="text-sm font-semibold text-white bg-gray-800 px-3 py-1 rounded-xl border border-gray-700">+ Book</Link>
         }
       />
 
       {/* User greeting */}
       <div className="px-4 pt-4 pb-3">
-        <p className="text-gray-500 text-sm">
-          Welcome back, <span className="font-semibold text-gray-900">{user?.full_name?.split(' ')[0]}</span>
+        <p className="text-gray-400 text-sm">
+          Welcome back, <span className="font-semibold text-white">{user?.full_name?.split(' ')[0]}</span>
         </p>
       </div>
 
       {/* Status tabs */}
       <div className="px-4 mb-4">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-gray-900 rounded-xl p-1 border border-gray-800">
           {STATUS_TABS.map(t => (
             <button
               key={t}
               type="button"
               onClick={() => { setTab(t); setPage(1); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors capitalize ${
-                tab === t ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'
+                tab === t ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-500'
               }`}
             >
               {t}
@@ -106,7 +106,7 @@ export default function DashboardPage() {
             {bookings.map(b => (
               <div key={b.id} className="card p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <p className="font-semibold text-gray-900 text-sm">{b.route_name}</p>
+                  <p className="font-semibold text-white text-sm">{b.route_name}</p>
                   <Badge label={b.status.toUpperCase()} status={b.status} />
                 </div>
 
@@ -121,7 +121,7 @@ export default function DashboardPage() {
                 </p>
 
                 <div className="flex items-center justify-between">
-                  <p className="font-bold text-blue-700 text-sm">RWF {Number(b.amount).toLocaleString()}</p>
+                  <p className="font-bold text-amber-400 text-sm">RWF {Number(b.amount).toLocaleString()}</p>
                   <div className="flex gap-2">
                     {b.status === 'pending' && (
                       <Link href={`/payment/${b.id}`} className="btn-primary text-xs py-1.5 px-3">Pay Now</Link>

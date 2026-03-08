@@ -38,6 +38,7 @@ function SearchContent() {
     departureStationId: params.get('from') || '',
     destinationStationId: params.get('to') || '',
     date: params.get('date') || format(new Date(), 'yyyy-MM-dd'),
+    passengers: 1,
   });
 
   useEffect(() => {
@@ -140,17 +141,32 @@ function SearchContent() {
               </select>
             </div>
 
-            <div>
-              <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">Travel Date</label>
-              <input
-                type="date"
-                title="Travel date"
-                placeholder="Travel date"
-                className="input-field"
-                value={form.date}
-                min={format(new Date(), 'yyyy-MM-dd')}
-                onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-              />
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">Travel Date</label>
+                <input
+                  type="date"
+                  title="Travel date"
+                  placeholder="Travel date"
+                  className="input-field"
+                  value={form.date}
+                  min={format(new Date(), 'yyyy-MM-dd')}
+                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                />
+              </div>
+              <div className="w-36">
+                <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">Passengers</label>
+                <select
+                  title="Number of passengers"
+                  className="input-field"
+                  value={form.passengers}
+                  onChange={e => setForm(f => ({ ...f, passengers: Number(e.target.value) }))}
+                >
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <option key={n} value={n}>{n} {n === 1 ? 'Passenger' : 'Passengers'}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <button

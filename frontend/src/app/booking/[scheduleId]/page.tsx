@@ -91,11 +91,11 @@ export default function BookingPage() {
   };
 
   const seatClassColor = (cls: string, status: string, selected: boolean) => {
-    if (status === 'booked') return 'bg-gray-100 text-gray-300 cursor-not-allowed border-gray-100';
-    if (selected) return 'bg-blue-600 text-white border-blue-600';
-    if (cls === 'vip') return 'bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 cursor-pointer';
-    if (cls === 'business') return 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 cursor-pointer';
-    return 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50 hover:border-blue-400 cursor-pointer';
+    if (status === 'booked') return 'bg-gray-800 text-gray-600 cursor-not-allowed border-gray-700';
+    if (selected) return 'bg-white text-gray-950 border-white';
+    if (cls === 'vip') return 'bg-amber-950 text-amber-400 border-amber-800 hover:bg-amber-900 cursor-pointer';
+    if (cls === 'business') return 'bg-purple-950 text-purple-400 border-purple-800 hover:bg-purple-900 cursor-pointer';
+    return 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700 hover:border-gray-500 cursor-pointer';
   };
 
   if (loading) return (
@@ -116,32 +116,32 @@ export default function BookingPage() {
       <AppHeader title="Select Seat" showBack backHref="/search" />
 
       {/* Schedule info strip */}
-      <div className="bg-blue-700 text-white px-4 py-4">
-        <p className="font-bold text-base">{schedule.route_name}</p>
-        <div className="flex items-center gap-3 mt-1 text-blue-100 text-sm">
+      <div className="bg-gray-900 border-b border-gray-800 px-4 py-4">
+        <p className="font-bold text-white text-base">{schedule.route_name}</p>
+        <div className="flex items-center gap-3 mt-1 text-gray-400 text-sm">
           <span>{format(new Date(schedule.departure_time), 'dd MMM · HH:mm')}</span>
-          <span className="text-blue-300">•</span>
+          <span className="text-gray-600">•</span>
           <span>{schedule.bus_name}</span>
-          <span className="ml-auto font-bold text-white">RWF {Number(schedule.base_price).toLocaleString()}</span>
+          <span className="ml-auto font-bold text-amber-400">RWF {Number(schedule.base_price).toLocaleString()}</span>
         </div>
       </div>
 
       <div className="px-4 py-5 space-y-5">
         {/* Seat map */}
         <div className="card">
-          <p className="font-semibold text-gray-800 mb-3">Choose your seat</p>
+          <p className="font-semibold text-white mb-3">Choose your seat</p>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-3 mb-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-gray-200 rounded bg-white inline-block" />Economy</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-purple-300 rounded bg-purple-50 inline-block" />Business</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-yellow-300 rounded bg-yellow-50 inline-block" />VIP</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-gray-100 rounded bg-gray-100 inline-block" />Booked</span>
+          <div className="flex flex-wrap gap-3 mb-4 text-xs text-gray-400">
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-gray-700 rounded bg-gray-800 inline-block" />Economy</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-purple-800 rounded bg-purple-950 inline-block" />Business</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-amber-800 rounded bg-amber-950 inline-block" />VIP</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-4 border border-gray-700 rounded bg-gray-800 opacity-40 inline-block" />Booked</span>
           </div>
 
           {/* Driver label */}
           <div className="flex justify-end mb-3">
-            <div className="bg-gray-100 rounded-lg px-3 py-1 text-xs text-gray-400 font-medium">Driver</div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-xs text-gray-400 font-medium">Driver</div>
           </div>
 
           {/* Seat grid */}
@@ -179,16 +179,16 @@ export default function BookingPage() {
           </div>
 
           {selectedSeat && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-xl text-sm text-blue-800 font-medium">
+            <div className="mt-4 p-3 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white font-medium">
               Seat {selectedSeat.seat_number} selected
-              <span className="ml-2 text-xs text-blue-500 capitalize">({selectedSeat.seat_class})</span>
+              <span className="ml-2 text-xs text-gray-400 capitalize">({selectedSeat.seat_class})</span>
             </div>
           )}
         </div>
 
         {/* Passenger form */}
         <div className="card">
-          <p className="font-semibold text-gray-800 mb-4">Passenger Details</p>
+          <p className="font-semibold text-white mb-4">Passenger Details</p>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="label">Full Name</label>
@@ -207,14 +207,14 @@ export default function BookingPage() {
             </div>
 
             {/* Order summary */}
-            <div className="bg-gray-50 rounded-2xl p-4 text-sm space-y-2">
-              <div className="flex justify-between text-gray-600">
+            <div className="bg-gray-800 border border-gray-700 rounded-2xl p-4 text-sm space-y-2">
+              <div className="flex justify-between text-gray-400">
                 <span>Seat</span>
                 <span>{selectedSeat ? `#${selectedSeat.seat_number} (${selectedSeat.seat_class})` : '—'}</span>
               </div>
-              <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-2">
+              <div className="flex justify-between font-bold text-white border-t border-gray-700 pt-2">
                 <span>Total</span>
-                <span>RWF {Number(schedule.base_price).toLocaleString()}</span>
+                <span className="text-amber-400">RWF {Number(schedule.base_price).toLocaleString()}</span>
               </div>
             </div>
 

@@ -35,7 +35,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) router.replace('/search');
+    if (isAuthenticated) router.replace('/');
   }, [isAuthenticated, router]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
@@ -50,7 +50,7 @@ export default function RegisterPage() {
       const { user, accessToken, refreshToken } = res.data.data;
       setAuth(user, accessToken, refreshToken);
       toast.success('Account created! Welcome to TEGA.Rw.');
-      router.push('/search');
+      router.push('/');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
@@ -64,8 +64,8 @@ export default function RegisterPage() {
 
       <div className="px-5 pt-6 pb-10">
         <div className="mb-6">
-          <p className="font-bold text-gray-900 text-xl">Join TEGA.Rw</p>
-          <p className="text-gray-500 text-sm mt-1">Book buses across Rwanda with ease</p>
+          <p className="font-bold text-white text-xl">Join TEGA.Rw</p>
+          <p className="text-gray-400 text-sm mt-1">Book buses across Rwanda with ease</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -112,7 +112,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Already have an account?{' '}
-          <Link href="/auth/login" className="text-blue-600 font-semibold">Sign in</Link>
+          <Link href="/auth/login" className="text-white font-semibold underline underline-offset-2">Sign in</Link>
         </p>
       </div>
     </MainLayout>

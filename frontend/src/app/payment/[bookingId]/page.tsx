@@ -93,12 +93,12 @@ export default function PaymentPage() {
 
       <div className="px-4 py-5 space-y-4">
         {/* Amount due */}
-        <div className="bg-blue-700 text-white rounded-2xl p-5">
-          <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide mb-1">Amount Due</p>
-          <p className="text-3xl font-bold">RWF {Number(booking.amount).toLocaleString()}</p>
-          <div className="flex items-center gap-2 mt-2 text-blue-200 text-sm">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1">Amount Due</p>
+          <p className="text-3xl font-bold text-amber-400">RWF {Number(booking.amount).toLocaleString()}</p>
+          <div className="flex items-center gap-2 mt-2 text-gray-400 text-sm">
             <span>{booking.route_name}</span>
-            <span className="text-blue-400">•</span>
+            <span className="text-gray-600">•</span>
             <span>Seat #{booking.seat_number}</span>
           </div>
         </div>
@@ -107,22 +107,22 @@ export default function PaymentPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Method selection */}
             <div className="card">
-              <p className="font-semibold text-gray-800 mb-3 text-sm">Payment Method</p>
+              <p className="font-semibold text-white mb-3 text-sm">Payment Method</p>
               <div className="space-y-2">
                 {[
                   { value: 'mtn_momo', label: 'MTN MoMo', abbr: 'M', color: 'bg-yellow-400' },
                   { value: 'airtel_money', label: 'Airtel Money', abbr: 'A', color: 'bg-red-500' },
                 ].map(opt => (
                   <label key={opt.value} className={`flex items-center gap-3 p-3.5 border-2 rounded-2xl cursor-pointer transition-all ${
-                    method === opt.value ? 'border-blue-600 bg-blue-50' : 'border-gray-100 bg-gray-50'
+                    method === opt.value ? 'border-white/40 bg-gray-800' : 'border-gray-800 bg-gray-900'
                   }`}>
                     <input {...register('method')} type="radio" value={opt.value} className="sr-only" />
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white ${opt.color}`}>
                       {opt.abbr}
                     </div>
-                    <span className="text-sm font-semibold text-gray-800">{opt.label}</span>
+                    <span className="text-sm font-semibold text-white">{opt.label}</span>
                     {method === opt.value && (
-                      <svg className="w-5 h-5 text-blue-600 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5 text-white ml-auto" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                     )}
@@ -159,10 +159,10 @@ export default function PaymentPage() {
               <span className="text-2xl">📱</span>
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-lg">Check Your Phone</p>
-              <p className="text-sm text-gray-500 mt-1">{instructions}</p>
+              <p className="font-bold text-white text-lg">Check Your Phone</p>
+              <p className="text-sm text-gray-400 mt-1">{instructions}</p>
             </div>
-            <div className="bg-blue-50 rounded-xl p-3 text-sm text-blue-800">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 text-sm text-gray-300">
               After entering your PIN, tap the button below to confirm.
             </div>
             <button type="button" onClick={handleConfirm} className="btn-primary w-full py-4">

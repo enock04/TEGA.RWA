@@ -2,19 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
 import MainLayout from '@/components/layout/MainLayout';
 import AppHeader from '@/components/layout/AppHeader';
 import Spinner from '@/components/ui/Spinner';
+import { schedulesApi } from '@/lib/api';
 
 interface Coords { lat: number; lon: number; }
 const KIGALI: Coords = { lat: -1.9441, lon: 30.0619 };
+
+interface PopularRoute {
+  id: string;
+  route_name: string;
+  departure_station: string;
+  arrival_station: string;
+  departure_time: string;
+  base_price: number;
+  available_seats: number;
+}
 
 export default function HomePage() {
   const { isAuthenticated, isLoading, user, initFromStorage } = useAuthStore();
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locLabel, setLocLabel] = useState('Locating you…');
+  const [routes, setRoutes] = useState<PopularRoute[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
 
   useEffect(() => {
     initFromStorage();
@@ -28,6 +41,18 @@ export default function HomePage() {
       { timeout: 8000 }
     );
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setRoutesLoading(true);
+    schedulesApi.getAll({ limit: 6 })
+      .then(res => {
+        const data = res.data?.data?.schedules ?? res.data?.data ?? [];
+        setRoutes(Array.isArray(data) ? data.slice(0, 6) : []);
+      })
+      .catch(() => setRoutes([]))
+      .finally(() => setRoutesLoading(false));
+  }, [isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -117,6 +142,68 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </Link>
+        </div>
+
+        {/* Popular Routes */}
+        <div className="px-4 pt-6 pb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Popular Routes</p>
+            <Link href="/search" className="text-xs text-gray-400 underline underline-offset-2">See all</Link>
+          </div>
+
+          {routesLoading ? (
+            <div className="flex justify-center py-6">
+              <Spinner />
+            </div>
+          ) : routes.length === 0 ? (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+              <p className="text-gray-500 text-sm">No upcoming routes available</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {routes.map(route => (
+                <Link
+                  key={route.id}
+                  href="/search"
+                  className="flex items-center bg-gray-900 border border-gray-800 rounded-2xl px-4 py-4 gap-4 active:bg-gray-800 transition-colors"
+                >
+                  {/* Bus icon */}
+                  <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center shrink-0 border border-gray-700">
+                    <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 6v12M16 6v12M3 10h18M3 14h18M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+
+                  {/* Route info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-white font-semibold text-sm truncate">{route.departure_station}</span>
+                      <svg className="w-3.5 h-3.5 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                      </svg>
+                      <span className="text-white font-semibold text-sm truncate">{route.arrival_station}</span>
+                    </div>
+                    {route.departure_time && (
+                      <p className="text-gray-500 text-xs">
+                        {format(new Date(route.departure_time), 'EEE, dd MMM · HH:mm')}
+                      </p>
+                    )}
+                    {route.available_seats != null && (
+                      <p className="text-gray-600 text-xs">{route.available_seats} seats left</p>
+                    )}
+                  </div>
+
+                  {/* Price */}
+                  <div className="text-right shrink-0">
+                    <p className="text-amber-400 font-bold text-sm">
+                      RWF {Number(route.base_price).toLocaleString()}
+                    </p>
+                    <p className="text-gray-600 text-xs">per seat</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </MainLayout>
     );

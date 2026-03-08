@@ -78,15 +78,15 @@ export default function BookingSummaryPage() {
           )}
 
           {/* Route info */}
-          <div className="bg-blue-50 rounded-xl p-4 mb-4">
-            <p className="font-bold text-gray-900 text-base mb-1">{booking.route_name}</p>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-4">
+            <p className="font-bold text-white text-base mb-1">{booking.route_name}</p>
+            <div className="flex items-center gap-2 text-sm text-gray-400">
               <span>{booking.departure_station}</span>
-              <span className="text-gray-400">→</span>
+              <span className="text-gray-600">→</span>
               <span>{booking.arrival_station}</span>
             </div>
             {booking.departure_time && (
-              <p className="text-sm text-blue-700 font-semibold mt-1.5">
+              <p className="text-sm text-amber-400 font-semibold mt-1.5">
                 {format(new Date(booking.departure_time), 'EEE, dd MMM yyyy · HH:mm')}
               </p>
             )}
@@ -101,7 +101,7 @@ export default function BookingSummaryPage() {
             <Row label="Bus" value={`${booking.bus_name} (${booking.plate_number})`} />
             <Row label="Seat" value={`#${booking.seat_number} (${booking.seat_class})`} />
             <div className="border-t border-gray-100" />
-            <Row label="Amount" value={`RWF ${Number(booking.amount).toLocaleString()}`} bold />
+            <Row label="Amount" value={`RWF ${Number(booking.amount).toLocaleString()}`} bold amber />
           </div>
         </div>
 
@@ -139,11 +139,11 @@ export default function BookingSummaryPage() {
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({ label, value, bold, amber }: { label: string; value: string; bold?: boolean; amber?: boolean }) {
   return (
     <div className="flex justify-between">
       <span className="text-gray-500">{label}</span>
-      <span className={bold ? 'font-bold text-gray-900' : 'text-gray-800 text-right max-w-[60%]'}>{value}</span>
+      <span className={bold ? `font-bold ${amber ? 'text-amber-400' : 'text-white'}` : 'text-gray-300 text-right max-w-[60%]'}>{value}</span>
     </div>
   );
 }
