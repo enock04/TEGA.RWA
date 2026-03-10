@@ -6,11 +6,14 @@ import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { busesApi } from '@/lib/api';
 
+const EMPTY = { name: '', plateNumber: '', busType: 'standard', totalSeats: '' };
+
 export default function AdminBusesPage() {
   const [buses, setBuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', plateNumber: '', busType: 'standard', totalSeats: '' });
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -20,16 +23,30 @@ export default function AdminBusesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const openCreate = () => { setEditing(null); setForm(EMPTY); setShowForm(true); };
+  const openEdit = (b: any) => {
+    setEditing(b);
+    setForm({ name: b.name, plateNumber: b.plate_number, busType: b.bus_type, totalSeats: String(b.total_seats) });
+    setShowForm(true);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
   const handleSave = async () => {
     if (!form.name || !form.plateNumber || !form.totalSeats) { toast.error('Fill all required fields'); return; }
     setSaving(true);
     try {
-      const res = await busesApi.create({ ...form, totalSeats: +form.totalSeats });
-      setBuses(b => [res.data.data.bus, ...b]);
-      setShowForm(false);
-      setForm({ name: '', plateNumber: '', busType: 'standard', totalSeats: '' });
-      toast.success('Bus created');
-    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to create bus'); }
+      const payload = { ...form, totalSeats: +form.totalSeats };
+      if (editing) {
+        const res = await busesApi.update(editing.id, payload);
+        setBuses(b => b.map(x => x.id === editing.id ? res.data.data.bus : x));
+        toast.success('Bus updated');
+      } else {
+        const res = await busesApi.create(payload);
+        setBuses(b => [res.data.data.bus, ...b]);
+        toast.success('Bus created');
+      }
+      closeForm();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to save bus'); }
     finally { setSaving(false); }
   };
 
@@ -43,12 +60,12 @@ export default function AdminBusesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Buses</h1>
-        <button onClick={() => setShowForm(v => !v)} className="btn-primary text-sm">+ Add Bus</button>
+        <button onClick={openCreate} className="btn-primary text-sm">+ Add Bus</button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 shadow-card">
-          <h2 className="font-semibold text-gray-800 mb-4">New Bus</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">{editing ? 'Edit Bus' : 'New Bus'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Bus Name *</label>
@@ -70,8 +87,8 @@ export default function AdminBusesPage() {
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm flex items-center gap-2">{saving ? <Spinner size="sm" /> : null} Save Bus</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm flex items-center gap-2">{saving ? <Spinner size="sm" /> : null} {editing ? 'Update Bus' : 'Save Bus'}</button>
+            <button onClick={closeForm} className="btn-secondary text-sm">Cancel</button>
           </div>
         </div>
       )}
@@ -94,7 +111,8 @@ export default function AdminBusesPage() {
                   <td className="px-4 py-3 text-gray-600 capitalize">{b.bus_type}</td>
                   <td className="px-4 py-3 text-gray-600">{b.total_seats}</td>
                   <td className="px-4 py-3 text-gray-500">{b.agency_name ?? '—'}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right flex gap-3 justify-end">
+                    <button onClick={() => openEdit(b)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                     <button onClick={() => handleDelete(b.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Delete</button>
                   </td>
                 </tr>

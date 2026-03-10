@@ -94,6 +94,11 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
             {errors.password && <p className="error-text">{errors.password.message}</p>}
+            <div className="text-right mt-1">
+              <Link href="/auth/forgot-password" className="text-xs text-gray-400 hover:text-white underline underline-offset-2">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button

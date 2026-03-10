@@ -46,4 +46,29 @@ const getProfile = async (req, res) => {
   return success(res, { user }, 'Profile retrieved');
 };
 
-module.exports = { register, login, refreshToken, changePassword, getProfile };
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { phoneNumber } = req.body;
+    const token = await authService.forgotPassword(phoneNumber);
+    // In dev, log the token to server console only — never expose it in the response
+    if (process.env.NODE_ENV !== 'production' && token) {
+      require('../../utils/logger').info(`[DEV] Password reset token for ${phoneNumber}: ${token}`);
+    }
+    // Always return the same response regardless of whether the number exists (prevents enumeration)
+    return success(res, {}, 'If this number is registered, a reset code has been sent');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+    await authService.resetPassword(token, newPassword);
+    return success(res, null, 'Password reset successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, refreshToken, changePassword, getProfile, forgotPassword, resetPassword };

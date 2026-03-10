@@ -40,7 +40,21 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     adminApi.getDashboard()
-      .then(res => setStats(res.data.data))
+      .then(res => {
+        const d = res.data.data;
+        setStats({
+          totalBookings: d.stats?.totalBookings ?? 0,
+          confirmedBookings: d.stats?.confirmed ?? 0,
+          pendingBookings: d.stats?.pending ?? 0,
+          cancelledBookings: d.stats?.cancelled ?? 0,
+          totalRevenue: d.stats?.totalRevenue ?? 0,
+          totalPassengers: d.stats?.passengers ?? 0,
+          totalBuses: d.stats?.totalBuses ?? 0,
+          totalRoutes: d.stats?.totalRoutes ?? 0,
+          recentBookings: d.recentBookings ?? [],
+          topRoutes: d.topRoutes ?? [],
+        });
+      })
       .catch(() => toast.error('Failed to load dashboard stats'))
       .finally(() => setLoading(false));
   }, []);
@@ -104,7 +118,7 @@ export default function AdminDashboard() {
                 <div key={i} className="flex items-center justify-between text-sm">
                   <div>
                     <p className="font-medium text-gray-900">{r.route_name}</p>
-                    <p className="text-gray-500 text-xs">{r.booking_count} bookings</p>
+                    <p className="text-gray-500 text-xs">{r.total_bookings} bookings</p>
                   </div>
                   <p className="font-semibold text-blue-700">RWF {Number(r.revenue).toLocaleString()}</p>
                 </div>

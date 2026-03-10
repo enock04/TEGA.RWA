@@ -51,14 +51,11 @@ export default function BookingPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [schedRes] = await Promise.all([
-          schedulesApi.getById(scheduleId),
-          busesApi.getSeats('', scheduleId),
-        ]);
+        const schedRes = await schedulesApi.getById(scheduleId);
         const sched = schedRes.data.data.schedule;
         setSchedule(sched);
-        const seatRes2 = await busesApi.getSeats(sched.bus_id, scheduleId);
-        setSeats(seatRes2.data.data.seats);
+        const seatRes = await busesApi.getSeats(sched.bus_id, scheduleId);
+        setSeats(seatRes.data.data.seats);
       } catch {
         toast.error('Failed to load schedule details');
         router.push('/search');

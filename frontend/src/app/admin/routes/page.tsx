@@ -6,12 +6,15 @@ import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { routesApi, stationsApi } from '@/lib/api';
 
+const EMPTY = { name: '', departureStationId: '', arrivalStationId: '', distanceKm: '', durationMinutes: '' };
+
 export default function AdminRoutesPage() {
   const [routes, setRoutes] = useState<any[]>([]);
   const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', departureStationId: '', arrivalStationId: '', distanceKm: '', durationMinutes: '' });
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -21,16 +24,30 @@ export default function AdminRoutesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const openCreate = () => { setEditing(null); setForm(EMPTY); setShowForm(true); };
+  const openEdit = (r: any) => {
+    setEditing(r);
+    setForm({ name: r.name, departureStationId: r.departure_station_id, arrivalStationId: r.arrival_station_id, distanceKm: r.distance_km ?? '', durationMinutes: r.duration_minutes ?? '' });
+    setShowForm(true);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
   const handleSave = async () => {
     if (!form.name || !form.departureStationId || !form.arrivalStationId) { toast.error('Fill required fields'); return; }
     setSaving(true);
     try {
-      const res = await routesApi.create({ ...form, distanceKm: form.distanceKm ? +form.distanceKm : undefined, durationMinutes: form.durationMinutes ? +form.durationMinutes : undefined });
-      setRoutes(r => [res.data.data.route, ...r]);
-      setShowForm(false);
-      setForm({ name: '', departureStationId: '', arrivalStationId: '', distanceKm: '', durationMinutes: '' });
-      toast.success('Route created');
-    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to create route'); }
+      const payload = { ...form, distanceKm: form.distanceKm ? +form.distanceKm : undefined, durationMinutes: form.durationMinutes ? +form.durationMinutes : undefined };
+      if (editing) {
+        const res = await routesApi.update(editing.id, payload);
+        setRoutes(r => r.map(x => x.id === editing.id ? res.data.data.route : x));
+        toast.success('Route updated');
+      } else {
+        const res = await routesApi.create(payload);
+        setRoutes(r => [res.data.data.route, ...r]);
+        toast.success('Route created');
+      }
+      closeForm();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to save route'); }
     finally { setSaving(false); }
   };
 
@@ -44,12 +61,12 @@ export default function AdminRoutesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Routes</h1>
-        <button onClick={() => setShowForm(v => !v)} className="btn-primary text-sm">+ Add Route</button>
+        <button onClick={openCreate} className="btn-primary text-sm">+ Add Route</button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 shadow-card">
-          <h2 className="font-semibold text-gray-800 mb-4">New Route</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">{editing ? 'Edit Route' : 'New Route'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="label">Route Name *</label>
@@ -79,8 +96,8 @@ export default function AdminRoutesPage() {
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm flex items-center gap-2">{saving ? <Spinner size="sm" /> : null} Save Route</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
+            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm flex items-center gap-2">{saving ? <Spinner size="sm" /> : null} {editing ? 'Update Route' : 'Save Route'}</button>
+            <button onClick={closeForm} className="btn-secondary text-sm">Cancel</button>
           </div>
         </div>
       )}
@@ -103,7 +120,8 @@ export default function AdminRoutesPage() {
                   <td className="px-4 py-3 text-gray-600">{r.arrival_station}</td>
                   <td className="px-4 py-3 text-gray-500">{r.distance_km ? `${r.distance_km} km` : '—'}</td>
                   <td className="px-4 py-3 text-gray-500">{r.duration_minutes ? `${r.duration_minutes} min` : '—'}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right flex gap-3 justify-end">
+                    <button onClick={() => openEdit(r)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                     <button onClick={() => handleDelete(r.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Delete</button>
                   </td>
                 </tr>

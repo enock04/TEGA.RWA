@@ -59,11 +59,19 @@ export const authApi = {
   getProfile: () => api.get('/auth/profile'),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.put('/auth/change-password', data),
+  forgotPassword: (phoneNumber: string) =>
+    api.post('/auth/forgot-password', { phoneNumber }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post('/auth/reset-password', { token, newPassword }),
 };
 
 export const stationsApi = {
   getAll: (params?: { search?: string; province?: string }) =>
     api.get('/stations', { params }),
+  getById: (id: string) => api.get(`/stations/${id}`),
+  create: (data: object) => api.post('/stations', data),
+  update: (id: string, data: object) => api.put(`/stations/${id}`, data),
+  delete: (id: string) => api.delete(`/stations/${id}`),
 };
 
 export const routesApi = {

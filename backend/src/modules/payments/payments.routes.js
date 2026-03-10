@@ -42,7 +42,7 @@ const router = express.Router();
 router.post('/initiate',
   authenticate,
   [
-    body('bookingId').isUUID().withMessage('Invalid booking ID'),
+    body('bookingId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid booking ID'),
     body('method')
       .isIn(['mtn_momo', 'airtel_money'])
       .withMessage('Method must be mtn_momo or airtel_money'),
@@ -95,6 +95,20 @@ router.get('/booking/:bookingId', authenticate, controller.getByBooking);
  */
 router.get('/', authenticate, authorize('admin', 'agency'), controller.getAll);
 
+// Webhook secret validation middleware
+const validateWebhookSecret = (req, res, next) => {
+  const secret = req.headers['x-webhook-secret'];
+  const expected = process.env.WEBHOOK_SECRET;
+  if (!expected) {
+    // No secret configured — reject all webhook calls (fail secure)
+    return res.status(403).json({ success: false, message: 'Webhook not configured' });
+  }
+  if (!secret || secret !== expected) {
+    return res.status(403).json({ success: false, message: 'Invalid webhook secret' });
+  }
+  next();
+};
+
 /**
  * @swagger
  * /payments/webhook:
@@ -104,6 +118,6 @@ router.get('/', authenticate, authorize('admin', 'agency'), controller.getAll);
  *     security: []
  *     description: Called by MTN MoMo / Airtel Money to notify payment status changes
  */
-router.post('/webhook', controller.webhook);
+router.post('/webhook', validateWebhookSecret, controller.webhook);
 
 module.exports = router;

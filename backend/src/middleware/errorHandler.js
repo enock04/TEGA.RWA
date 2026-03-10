@@ -1,12 +1,23 @@
 const logger = require('../utils/logger');
 
+const SENSITIVE_FIELDS = ['password', 'currentPassword', 'newPassword', 'token', 'refreshToken', 'accessToken'];
+
+const sanitizeBody = (body) => {
+  if (!body || typeof body !== 'object') return body;
+  const sanitized = { ...body };
+  for (const field of SENSITIVE_FIELDS) {
+    if (field in sanitized) sanitized[field] = '[REDACTED]';
+  }
+  return sanitized;
+};
+
 const errorHandler = (err, req, res, next) => {
   logger.error({
     message: err.message,
-    stack: err.stack,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
     url: req.url,
     method: req.method,
-    body: req.body,
+    body: sanitizeBody(req.body),
   });
 
   if (err.code === '23505') {
@@ -20,15 +31,14 @@ const errorHandler = (err, req, res, next) => {
   }
 
   const statusCode = err.statusCode || 500;
-  const message = process.env.NODE_ENV === 'production' && statusCode === 500
-    ? 'Internal server error'
-    : err.message;
+  // Never leak internal error details — always use generic message for 500s
+  const message = statusCode === 500 ? 'Internal server error' : err.message;
 
   res.status(statusCode).json({ success: false, message });
 };
 
 const notFoundHandler = (req, res) => {
-  res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
+  res.status(404).json({ success: false, message: 'Resource not found' });
 };
 
 module.exports = { errorHandler, notFoundHandler };

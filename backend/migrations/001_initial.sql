@@ -239,3 +239,22 @@ CREATE TRIGGER trg_buses_updated_at        BEFORE UPDATE ON buses        FOR EAC
 CREATE TRIGGER trg_schedules_updated_at    BEFORE UPDATE ON schedules    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_bookings_updated_at     BEFORE UPDATE ON bookings     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_payments_updated_at     BEFORE UPDATE ON payments     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+-- ─────────────────────────────────────────────
+-- PASSWORD RESET TOKENS
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  user_id    UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  token      VARCHAR(36) NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used       BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ─────────────────────────────────────────────
+-- ACCOUNT LOCKOUT FIELDS
+-- ─────────────────────────────────────────────
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;

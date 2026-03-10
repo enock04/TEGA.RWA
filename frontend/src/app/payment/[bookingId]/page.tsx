@@ -64,6 +64,27 @@ export default function PaymentPage() {
     }
   };
 
+  // Auto-poll payment status when processing
+  useEffect(() => {
+    if (step !== 'processing' || !paymentId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await paymentsApi.getByBooking(bookingId);
+        const status = res.data.data.payment?.status;
+        if (status === 'completed') {
+          clearInterval(interval);
+          toast.success('Payment confirmed! Your booking is now active.');
+          router.push(`/ticket/${bookingId}`);
+        } else if (status === 'failed') {
+          clearInterval(interval);
+          toast.error('Payment failed. Please try again.');
+          setStep('form');
+        }
+      } catch { /* ignore poll errors */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [step, paymentId, bookingId, router]);
+
   const handleConfirm = async () => {
     setStep('confirming');
     try {

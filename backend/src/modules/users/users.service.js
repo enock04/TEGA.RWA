@@ -39,7 +39,8 @@ const updateProfile = async (userId, { fullName, email }) => {
 };
 
 const getAllUsers = async ({ page = 1, limit = 20, role, search }) => {
-  const offset = (page - 1) * limit;
+  const safeLimit = Math.min(parseInt(limit) || 20, 100); // cap at 100
+  const offset = (page - 1) * safeLimit;
   const params = [];
   let where = 'WHERE 1=1';
 
@@ -49,11 +50,12 @@ const getAllUsers = async ({ page = 1, limit = 20, role, search }) => {
   }
 
   if (search) {
-    params.push(`%${search}%`);
+    const safeSearch = String(search).slice(0, 50); // prevent long query strings
+    params.push(`%${safeSearch}%`);
     where += ` AND (full_name ILIKE $${params.length} OR phone_number ILIKE $${params.length})`;
   }
 
-  params.push(limit, offset);
+  params.push(safeLimit, offset);
   const result = await query(
     `SELECT id, full_name, phone_number, email, role, is_active, created_at, last_login_at
      FROM users ${where}

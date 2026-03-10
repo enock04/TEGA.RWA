@@ -129,4 +129,21 @@ router.put('/change-password',
  */
 router.get('/profile', authenticate, controller.getProfile);
 
+router.post('/forgot-password',
+  [body('phoneNumber').trim().notEmpty().withMessage('Phone number is required')],
+  validate,
+  controller.forgotPassword
+);
+
+router.post('/reset-password',
+  [
+    body('token').notEmpty().withMessage('Reset token is required'),
+    body('newPassword')
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+      .matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and number'),
+  ],
+  validate,
+  controller.resetPassword
+);
+
 module.exports = router;

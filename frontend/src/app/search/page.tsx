@@ -33,6 +33,7 @@ function SearchContent() {
   const [searched, setSearched] = useState(false);
   const [coords, setCoords] = useState<Coords | null>(null);
   const [locError, setLocError] = useState(false);
+  const [sort, setSort] = useState<'earliest' | 'latest' | 'price_asc' | 'price_desc'>('earliest');
 
   const [form, setForm] = useState({
     departureStationId: params.get('from') || '',
@@ -234,11 +235,29 @@ function SearchContent() {
           />
         ) : results.length > 0 ? (
           <div>
-            <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-3">
-              {results.length} bus{results.length !== 1 ? 'es' : ''} available
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">
+                {results.length} bus{results.length !== 1 ? 'es' : ''} available
+              </p>
+              <select
+                title="Sort results"
+                className="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded-lg px-2 py-1.5"
+                value={sort}
+                onChange={e => setSort(e.target.value as typeof sort)}
+              >
+                <option value="earliest">Earliest first</option>
+                <option value="latest">Latest first</option>
+                <option value="price_asc">Price: low to high</option>
+                <option value="price_desc">Price: high to low</option>
+              </select>
+            </div>
             <div className="space-y-3">
-              {results.map((s) => (
+              {[...results].sort((a, b) => {
+                if (sort === 'earliest') return new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime();
+                if (sort === 'latest') return new Date(b.departure_time).getTime() - new Date(a.departure_time).getTime();
+                if (sort === 'price_asc') return Number(a.base_price) - Number(b.base_price);
+                return Number(b.base_price) - Number(a.base_price);
+              }).map((s) => (
                 <div key={s.schedule_id} className="card p-4">
                   {/* Times */}
                   <div className="flex items-center gap-2 mb-3">

@@ -14,6 +14,7 @@ export default function AdminSchedulesPage() {
   const [routes, setRoutes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
   const [form, setForm] = useState({ busId: '', routeId: '', departureTime: '', arrivalTime: '', basePrice: '' });
   const [saving, setSaving] = useState(false);
 
@@ -24,16 +25,33 @@ export default function AdminSchedulesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const EMPTY_FORM = { busId: '', routeId: '', departureTime: '', arrivalTime: '', basePrice: '' };
+  const toLocalInput = (iso: string) => iso ? iso.slice(0, 16) : '';
+
+  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
+  const openEdit = (s: any) => {
+    setEditing(s);
+    setForm({ busId: s.bus_id, routeId: s.route_id, departureTime: toLocalInput(s.departure_time), arrivalTime: toLocalInput(s.arrival_time), basePrice: String(s.base_price) });
+    setShowForm(true);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
+
   const handleSave = async () => {
     if (!form.busId || !form.routeId || !form.departureTime || !form.arrivalTime || !form.basePrice) { toast.error('Fill all required fields'); return; }
     setSaving(true);
     try {
-      const res = await schedulesApi.create({ ...form, basePrice: +form.basePrice });
-      setSchedules(s => [res.data.data.schedule, ...s]);
-      setShowForm(false);
-      setForm({ busId: '', routeId: '', departureTime: '', arrivalTime: '', basePrice: '' });
-      toast.success('Schedule created');
-    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to create schedule'); }
+      const payload = { ...form, basePrice: +form.basePrice };
+      if (editing) {
+        const res = await schedulesApi.update(editing.id, payload);
+        setSchedules(s => s.map(x => x.id === editing.id ? res.data.data.schedule : x));
+        toast.success('Schedule updated');
+      } else {
+        const res = await schedulesApi.create(payload);
+        setSchedules(s => [res.data.data.schedule, ...s]);
+        toast.success('Schedule created');
+      }
+      closeForm();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to save schedule'); }
     finally { setSaving(false); }
   };
 
@@ -47,12 +65,12 @@ export default function AdminSchedulesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Schedules</h1>
-        <button onClick={() => setShowForm(v => !v)} className="btn-primary text-sm">+ Add Schedule</button>
+        <button onClick={openCreate} className="btn-primary text-sm">+ Add Schedule</button>
       </div>
 
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 shadow-card">
-          <h2 className="font-semibold text-gray-800 mb-4">New Schedule</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">{editing ? 'Edit Schedule' : 'New Schedule'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Bus *</label>
@@ -83,7 +101,7 @@ export default function AdminSchedulesPage() {
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={handleSave} disabled={saving} className="btn-primary text-sm flex items-center gap-2">{saving ? <Spinner size="sm" /> : null} Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
+            <button onClick={closeForm} className="btn-secondary text-sm">Cancel</button>
           </div>
         </div>
       )}
@@ -109,7 +127,8 @@ export default function AdminSchedulesPage() {
                     <td className="px-4 py-3 font-semibold text-blue-700">RWF {Number(s.base_price).toLocaleString()}</td>
                     <td className="px-4 py-3 text-gray-600">{s.available_seats}/{s.total_seats}</td>
                     <td className="px-4 py-3"><Badge label={s.status} status={s.status} /></td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right flex items-center justify-end gap-3">
+                      {s.status === 'active' && <button onClick={() => openEdit(s)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>}
                       {s.status === 'active' && <button onClick={() => handleCancel(s.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Cancel</button>}
                     </td>
                   </tr>

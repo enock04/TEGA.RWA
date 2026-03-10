@@ -1,4 +1,6 @@
 require('dotenv').config();
+// Force IPv4 — Docker containers may not have IPv6 routing to external hosts
+require('dns').setDefaultResultOrder('ipv4first');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -10,6 +12,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { authenticate, authorize } = require('./middleware/auth');
 
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
@@ -24,14 +27,29 @@ const adminRoutes = require('./modules/admin/admin.routes');
 
 const app = express();
 
-// Security
-app.use(helmet());
+// ─── Security headers ────────────────────────
+// crossOriginResourcePolicy must be 'cross-origin' for a CORS API consumed by browsers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+// ─── CORS — fail closed if origin not whitelisted ────────────────────────────
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, cb) => {
+    // Allow server-to-server (no origin) and explicitly listed origins
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 
-// Rate limiting
+// ─── Rate limiting ────────────────────────────
+// Global — 100 req / 15 min per IP
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
@@ -41,7 +59,7 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Stricter limit for auth endpoints
+// Auth endpoints — 20 req / 15 min per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -49,34 +67,47 @@ const authLimiter = rateLimit({
 });
 app.use('/api/v1/auth/login', authLimiter);
 app.use('/api/v1/auth/register', authLimiter);
+app.use('/api/v1/auth/forgot-password', authLimiter);
+app.use('/api/v1/auth/reset-password', authLimiter);
 
-// Parsing and compression
+// Booking/payment creation — 30 req / hour per IP (prevents spam bookings)
+const transactionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: 'Too many transactions, please try again later.' },
+});
+app.use('/api/v1/bookings', transactionLimiter);
+app.use('/api/v1/payments/initiate', transactionLimiter);
+
+// ─── Parsing and compression ──────────────────
 app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(compression());
 
-// Logging
+// ─── Logging ─────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined', {
     stream: { write: (message) => logger.info(message.trim()) },
   }));
 }
 
-// Health check
+// ─── Health check (no env info leaked) ───────
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Documentation
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'TEGA.Rw API Docs',
-}));
+// ─── API Documentation (admin-only in production) ────────────────────────────
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'TEGA.Rw API Docs',
+  }));
+} else {
+  app.use('/api/docs', authenticate, authorize('admin'), swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'TEGA.Rw API Docs',
+  }));
+}
 
-// Routes
+// ─── Routes ───────────────────────────────────
 const API = '/api/v1';
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/users`, usersRoutes);
@@ -89,7 +120,7 @@ app.use(`${API}/payments`, paymentsRoutes);
 app.use(`${API}/tickets`, ticketsRoutes);
 app.use(`${API}/admin`, adminRoutes);
 
-// 404 & Error handlers
+// ─── 404 & Error handlers ─────────────────────
 app.use(notFoundHandler);
 app.use(errorHandler);
 
@@ -97,7 +128,9 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   logger.info(`TEGA.Rw API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
-  logger.info(`API Docs: http://localhost:${PORT}/api/docs`);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info(`API Docs: http://localhost:${PORT}/api/docs`);
+  }
 });
 
 module.exports = app;

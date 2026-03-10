@@ -36,8 +36,8 @@ const router = express.Router();
 router.post('/',
   authenticate,
   [
-    body('scheduleId').isUUID().withMessage('Invalid schedule ID'),
-    body('seatId').isUUID().withMessage('Invalid seat ID'),
+    body('scheduleId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid schedule ID'),
+    body('seatId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid seat ID'),
     body('passengerName').trim().notEmpty().withMessage('Passenger name is required'),
     body('passengerPhone').trim().notEmpty().matches(/^\+?[0-9]{10,15}$/).withMessage('Invalid phone number'),
     body('passengerEmail').optional().isEmail().normalizeEmail(),
