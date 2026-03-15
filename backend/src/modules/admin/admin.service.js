@@ -97,11 +97,9 @@ const getAgencies = async ({ page = 1, limit = 20, search } = {}) => {
   params.push(safeLimit, offset);
   const result = await query(
     `SELECT a.*,
-            COUNT(DISTINCT b.id) AS total_buses,
-            COUNT(DISTINCT u.id) AS total_users
+            COUNT(DISTINCT b.id) AS total_buses
      FROM agencies a
      LEFT JOIN buses b ON b.agency_id = a.id
-     LEFT JOIN users u ON u.role = 'agency'
      ${where}
      GROUP BY a.id
      ORDER BY a.created_at DESC

@@ -55,7 +55,7 @@ function StaffLoginForm() {
     // Only follow `next` if it matches the user's role section, otherwise use default
     if (next && user.role === 'admin' && next.startsWith('/admin') && next !== '/admin/login') { window.location.href = next; return; }
     if (next && user.role === 'agency' && next.startsWith('/agency')) { window.location.href = next; return; }
-    if (user.role === 'admin') window.location.href = '/admin/bookings';
+    if (user.role === 'admin') window.location.href = '/admin';
     else if (user.role === 'agency') window.location.href = '/agency';
     else window.location.href = '/';
   }, [isAuthenticated, user, router, params]);
