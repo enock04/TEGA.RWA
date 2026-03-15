@@ -52,8 +52,7 @@ A mobile-first web application that enables passengers to search, book, and pay 
 TEGA.RWA/
 ├── backend/              Node.js / Express REST API
 ├── frontend-passenger/   Passenger-facing Next.js app
-├── frontend-admin/       Staff Portal — agency + admin (unified)
-└── frontend/             Legacy monolith (reference only)
+└── frontend-admin/       Staff Portal — agency + admin (unified)
 ```
 
 **Two frontends, not three.** The agency and admin portals are merged into a single Next.js app (`frontend-admin`) called the **Staff Portal**. A single login page (`/admin/login`) asks the user to select their role before signing in. After login, the JWT role determines which portal section they land in:
@@ -69,7 +68,7 @@ Next.js middleware (edge runtime) enforces this boundary on every request — wr
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
+| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS |
 | State | Zustand (with localStorage + cookie persistence) |
 | Forms | React Hook Form + Zod |
 | HTTP | Axios with auto token-refresh interceptor |
@@ -184,7 +183,7 @@ All routes require `role = agency`.
 | Route | Description |
 |-------|-------------|
 | `/agency` | Dashboard — revenue, booking stats, top routes |
-| `/agency/buses` | Fleet management — add, edit, delete buses |
+| `/agency/buses` | Fleet management — add and edit buses |
 | `/agency/schedules` | Departure schedules — create, edit, cancel |
 | `/agency/bookings` | Passenger bookings on agency schedules, filters + pagination |
 | `/agency/reports` | Revenue and booking reports with date range filter |
@@ -297,7 +296,7 @@ All routes require `role = admin`.
 
 ### Agency Portal
 - [x] Dashboard with revenue, booking stats, top routes
-- [x] Fleet management (add / edit / delete buses)
+- [x] Fleet management (add / edit buses; delete requires admin)
 - [x] Schedule management (create / edit / cancel)
 - [x] Passenger bookings on agency schedules with filters and pagination
 - [x] Revenue reports with date range filter
@@ -537,6 +536,8 @@ docker compose up -d --build --force-recreate
 | Phone number OTP verification | Not implemented | Registration accepts any phone without verification |
 | HTTPS enforcement | Not implemented | Handle at reverse proxy level in production |
 | Shared cookie domain | Not configured | For production subdomains, set cookie domain to `.tega.rw` |
+| Agency data scoping | Not implemented | Agency dashboard, buses, bookings, and reports show system-wide data — no `agency_id` FK on `users` table yet; requires schema migration |
+| Bus delete for agency | Restricted | `DELETE /buses/:id` is admin-only; agency users can add and edit but not delete buses |
 
 ---
 
