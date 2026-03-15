@@ -1,6 +1,6 @@
 # TEGA.Rw — Project Status
 
-**Last updated:** March 2026
+**Last updated:** 2026-03-15
 **Status:** MVP Feature-Complete — Deployed to Render + Vercel
 
 ---
@@ -26,12 +26,16 @@ Two frontends, not three. Agency and admin portals are merged into a single Next
 backend/              → Node.js/Express API, Supabase PostgreSQL
 frontend-passenger/   → Passenger booking app
 frontend-admin/       → Staff Portal: agency + admin in one app
-  /admin/login        → Shared login page with role selector (Agency / Admin)
-  /agency/*           → Agency section (green sidebar) — role=agency only
-  /admin/*            → Admin section (purple sidebar) — role=admin only
+  src/app/
+    admin/
+      login/          → Shared login page (outside admin layout)
+      (protected)/    → Route group: all admin pages share AdminSidebar layout
+        bookings/, buses/, routes/, schedules/, stations/,
+        agencies/, users/, reports/, settings/
+    agency/           → Agency section (green sidebar) — role=agency only
 ```
 
-Next.js edge middleware enforces role boundaries on every request. Wrong-role users are redirected to `/admin/login`.
+Next.js App Router route group `(protected)` scopes the admin layout to protected pages only — the login page is excluded, eliminating the need for `isLoginPage` hacks. Edge middleware enforces role boundaries on every request; wrong-role users are redirected to `/admin/login`.
 
 ---
 
@@ -64,9 +68,11 @@ Next.js edge middleware enforces role boundaries on every request. Wrong-role us
 ### Staff Portal (`frontend-admin/`)
 
 - [x] Unified login at `/admin/login` — role selector (Agency green / Admin purple), routes to correct portal on login
+- [x] **Role validation on login** — agency credentials rejected when Admin tab selected, and vice versa
 - [x] **Agency section** (`/agency/*`) — dashboard, fleet management, schedules, bookings, reports, settings
 - [x] **Admin section** (`/admin/*`) — dashboard, agencies, buses, routes, schedules, bookings, stations, users, reports, settings
-- [x] Edge middleware — protects both `/agency/*` and `/admin/*`, enforces correct role per section
+- [x] Edge middleware — JWT decoded via `atob()` (Vercel edge runtime compatible), protects `/agency/*` and `/admin/*`, enforces correct role per section
+- [x] Route group `(protected)` — admin layout wraps only protected pages; login page excluded entirely
 - [x] Responsive — hamburger drawer on mobile, fixed sidebar on desktop
 - [x] Agency management page — create, edit, activate/deactivate agencies with pagination and search
 - [x] i18n — English, French, Kinyarwanda
@@ -75,11 +81,14 @@ Next.js edge middleware enforces role boundaries on every request. Wrong-role us
 
 - [x] Docker Compose — backend + 2 frontend containers (passenger + staff portal)
 - [x] Production Docker Compose — nginx reverse proxy, `expose` instead of `ports`, env_file
-- [x] `ENV HOSTNAME=0.0.0.0` in all frontend Dockerfiles (required for standalone Next.js in Docker)
+- [x] Dockerfiles use multi-stage build (`deps → builder → runner`) with `next start`; no standalone output required
+- [x] Nginx merges `staff.tega.rw`, `agency.tega.rw`, `admin.tega.rw` into single `frontend-admin` upstream
 - [x] Deployed backend to Render with Supabase PostgreSQL
 - [x] Deployed frontends to Vercel with `NEXT_PUBLIC_API_URL` environment variable
+- [x] `vercel.json` in `frontend-admin/` clears `.next/cache` before each build (prevents stale Tailwind content paths)
 - [x] CSP headers include `https://*.onrender.com` for Vercel→Render API calls
 - [x] Security headers on all frontends: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- [x] Removed stale `frontend/` and `frontend-agency/` directories (superseded by split architecture)
 
 ---
 
