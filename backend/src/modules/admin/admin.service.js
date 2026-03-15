@@ -80,4 +80,131 @@ const getReports = async ({ from, to } = {}) => {
   return { summary: summary.rows[0], byRoute: byRoute.rows, daily: daily.rows };
 };
 
-module.exports = { getDashboard, getReports };
+// ─── Agency Management ────────────────────────────────────────────────────────
+
+const getAgencies = async ({ page = 1, limit = 20, search } = {}) => {
+  const safeLimit = Math.min(parseInt(limit) || 20, 100);
+  const offset = (page - 1) * safeLimit;
+  const params = [];
+  let where = 'WHERE 1=1';
+
+  if (search) {
+    const s = String(search).slice(0, 50);
+    params.push(`%${s}%`);
+    where += ` AND (a.name ILIKE $${params.length} OR a.registration_no ILIKE $${params.length} OR a.contact_email ILIKE $${params.length})`;
+  }
+
+  params.push(safeLimit, offset);
+  const result = await query(
+    `SELECT a.*,
+            COUNT(DISTINCT b.id) AS total_buses,
+            COUNT(DISTINCT u.id) AS total_users
+     FROM agencies a
+     LEFT JOIN buses b ON b.agency_id = a.id
+     LEFT JOIN users u ON u.role = 'agency'
+     ${where}
+     GROUP BY a.id
+     ORDER BY a.created_at DESC
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  const countResult = await query(`SELECT COUNT(*) FROM agencies a ${where}`, params.slice(0, -2));
+  return {
+    agencies: result.rows,
+    total: parseInt(countResult.rows[0].count),
+    page: parseInt(page),
+    limit: safeLimit,
+  };
+};
+
+const getAgencyById = async (id) => {
+  const result = await query(
+    `SELECT a.*,
+            COUNT(DISTINCT b.id) AS total_buses
+     FROM agencies a
+     LEFT JOIN buses b ON b.agency_id = a.id
+     WHERE a.id = $1
+     GROUP BY a.id`,
+    [id]
+  );
+  if (!result.rows.length) {
+    const err = new Error('Agency not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return result.rows[0];
+};
+
+const createAgency = async ({ name, registrationNo, contactPhone, contactEmail, address, logoUrl }) => {
+  if (!name || !name.trim()) {
+    const err = new Error('Agency name is required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (registrationNo) {
+    const existing = await query('SELECT id FROM agencies WHERE registration_no = $1', [registrationNo]);
+    if (existing.rows.length) {
+      const err = new Error('Registration number already in use');
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
+  const result = await query(
+    `INSERT INTO agencies (name, registration_no, contact_phone, contact_email, address, logo_url)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *`,
+    [name.trim(), registrationNo || null, contactPhone || null, contactEmail || null, address || null, logoUrl || null]
+  );
+  return result.rows[0];
+};
+
+const updateAgency = async (id, { name, registrationNo, contactPhone, contactEmail, address, logoUrl }) => {
+  const existing = await query('SELECT id FROM agencies WHERE id = $1', [id]);
+  if (!existing.rows.length) {
+    const err = new Error('Agency not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (registrationNo) {
+    const conflict = await query('SELECT id FROM agencies WHERE registration_no = $1 AND id != $2', [registrationNo, id]);
+    if (conflict.rows.length) {
+      const err = new Error('Registration number already in use');
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
+  const result = await query(
+    `UPDATE agencies
+     SET name            = COALESCE($1, name),
+         registration_no = COALESCE($2, registration_no),
+         contact_phone   = COALESCE($3, contact_phone),
+         contact_email   = COALESCE($4, contact_email),
+         address         = COALESCE($5, address),
+         logo_url        = COALESCE($6, logo_url),
+         updated_at      = NOW()
+     WHERE id = $7
+     RETURNING *`,
+    [name?.trim() || null, registrationNo || null, contactPhone || null, contactEmail || null, address || null, logoUrl || null, id]
+  );
+  return result.rows[0];
+};
+
+const toggleAgencyStatus = async (id, isActive) => {
+  const result = await query(
+    'UPDATE agencies SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, is_active',
+    [isActive, id]
+  );
+  if (!result.rows.length) {
+    const err = new Error('Agency not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return result.rows[0];
+};
+
+module.exports = { getDashboard, getReports, getAgencies, getAgencyById, createAgency, updateAgency, toggleAgencyStatus };

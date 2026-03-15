@@ -135,8 +135,11 @@ export const ticketsApi = {
 export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
   getReports: (params?: object) => api.get('/admin/reports', { params }),
-  getAgencies: () => api.get('/admin/agencies'),
+  getAgencies: (params?: object) => api.get('/admin/agencies', { params }),
+  getAgency: (id: string) => api.get(`/admin/agencies/${id}`),
   createAgency: (data: object) => api.post('/admin/agencies', data),
+  updateAgency: (id: string, data: object) => api.put(`/admin/agencies/${id}`, data),
+  toggleAgencyStatus: (id: string, isActive: boolean) => api.patch(`/admin/agencies/${id}/status`, { isActive }),
 };
 
 export const usersApi = {

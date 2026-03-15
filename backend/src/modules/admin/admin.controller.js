@@ -1,4 +1,4 @@
-const { getDashboard, getReports } = require('./admin.service');
+const { getDashboard, getReports, getAgencies, getAgencyById, createAgency, updateAgency, toggleAgencyStatus } = require('./admin.service');
 const { success, error } = require('../../utils/response');
 
 const dashboard = async (req, res) => {
@@ -20,4 +20,54 @@ const reports = async (req, res) => {
   }
 };
 
-module.exports = { dashboard, reports };
+const listAgencies = async (req, res) => {
+  try {
+    const { page, limit, search } = req.query;
+    const data = await getAgencies({ page, limit, search });
+    return success(res, data, 'Agencies retrieved');
+  } catch (err) {
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+const addAgency = async (req, res) => {
+  try {
+    const { name, registrationNo, contactPhone, contactEmail, address, logoUrl } = req.body;
+    const agency = await createAgency({ name, registrationNo, contactPhone, contactEmail, address, logoUrl });
+    return success(res, { agency }, 'Agency created', 201);
+  } catch (err) {
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+const getAgency = async (req, res) => {
+  try {
+    const agency = await getAgencyById(req.params.id);
+    return success(res, { agency }, 'Agency retrieved');
+  } catch (err) {
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+const editAgency = async (req, res) => {
+  try {
+    const { name, registrationNo, contactPhone, contactEmail, address, logoUrl } = req.body;
+    const agency = await updateAgency(req.params.id, { name, registrationNo, contactPhone, contactEmail, address, logoUrl });
+    return success(res, { agency }, 'Agency updated');
+  } catch (err) {
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+const setAgencyStatus = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    if (typeof isActive !== 'boolean') return error(res, 'isActive must be a boolean', 400);
+    const agency = await toggleAgencyStatus(req.params.id, isActive);
+    return success(res, { agency }, `Agency ${isActive ? 'activated' : 'deactivated'}`);
+  } catch (err) {
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+module.exports = { dashboard, reports, listAgencies, addAgency, getAgency, editAgency, setAgencyStatus };

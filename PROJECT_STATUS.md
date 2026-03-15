@@ -39,7 +39,7 @@ All services start automatically. Schema and seed data are applied on first boot
 ## Known Remaining Issues
 
 - MTN MoMo and Airtel Money providers are mocked — real sandbox credentials required before live payment testing
-- Agency management endpoints (POST/GET /admin/agencies) return 503 — not yet implemented
+- Agency management endpoints (POST/GET/PUT/PATCH /admin/agencies) — fully implemented
 - SMS (password reset OTP) is mocked — real SMS gateway credentials needed
 - Email delivery is mocked — real SMTP/SES credentials needed
 - HTTPS not configured — nginx reverse proxy or Caddy needed before production
@@ -59,9 +59,9 @@ All services start automatically. Schema and seed data are applied on first boot
 [x] App Rename — IBTRS → TEGA.Rw across all files
 [x] Infrastructure — Docker Compose with backend + 3 frontend containers; fully working
 
-[ ] Agency Management API
-    - Implement POST /admin/agencies and GET /admin/agencies (currently 503)
-    - Tie agency accounts to specific routes/buses
+[x] Agency Management API
+    - GET/POST /admin/agencies, GET/PUT /admin/agencies/:id, PATCH /admin/agencies/:id/status
+    - Admin UI page at /admin/agencies with create, inline-edit, activate/deactivate
 
 [ ] Real Payment Integration
     - Obtain MTN MoMo and Airtel Money sandbox credentials

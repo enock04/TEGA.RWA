@@ -227,6 +227,7 @@
     "buses": "Buses",
     "stations": "Stations",
     "users": "Users",
+    "agencies": "Agencies",
     "adminPanel": "Admin Panel",
     "agencyPanel": "Agency Panel",
     "loadingDashboard": "Loading dashboard..."

@@ -227,6 +227,7 @@
     "buses": "Bus",
     "stations": "Gares",
     "users": "Utilisateurs",
+    "agencies": "Agences",
     "adminPanel": "Panneau Admin",
     "agencyPanel": "Panneau Agence",
     "loadingDashboard": "Chargement du tableau de bord..."

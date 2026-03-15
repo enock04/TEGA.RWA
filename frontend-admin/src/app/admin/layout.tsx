@@ -24,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/schedules', label: t('admin.schedules') },
     { href: '/admin/bookings',  label: t('admin.viewBookings') },
     { href: '/admin/stations',  label: t('admin.stations') },
+    { href: '/admin/agencies',  label: t('admin.agencies') },
     { href: '/admin/users',     label: t('admin.users') },
     { href: '/admin/reports',   label: t('admin.reports') },
   ];
