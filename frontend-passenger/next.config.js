@@ -14,7 +14,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https://tile.openstreetmap.org",
       "frame-src 'self' https://www.openstreetmap.org",
-      "connect-src 'self' http://localhost:5000 ws://localhost:* wss://localhost:* https://*.tega.rw",
+      "connect-src 'self' http://localhost:5000 ws://localhost:* wss://localhost:* https://*.tega.rw https://*.onrender.com",
       "font-src 'self' https://fonts.gstatic.com",
       "object-src 'none'",
       "base-uri 'self'",
@@ -24,7 +24,6 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  output: 'standalone',
   reactStrictMode: true,
   eslint: { ignoreDuringBuilds: true },
   env: {
