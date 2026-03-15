@@ -46,4 +46,22 @@ const toggleUserStatus = async (req, res, next) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, getAllUsers, toggleUserStatus };
+const updateUser = async (req, res, next) => {
+  try {
+    const { fullName, email, role } = req.body;
+    const user = await usersService.updateUser(req.params.id, { fullName, email, role });
+    return success(res, { user }, 'User updated successfully');
+  } catch (err) { next(err); }
+};
+
+const createAgent = async (req, res, next) => {
+  try {
+    const { fullName, phoneNumber, email, password } = req.body;
+    const user = await usersService.createAgent({ fullName, phoneNumber, email, password });
+    return success(res, { user }, 'Agent created successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getProfile, updateProfile, getAllUsers, toggleUserStatus, createAgent, updateUser };

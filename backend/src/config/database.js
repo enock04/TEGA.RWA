@@ -1,17 +1,19 @@
 const { Pool } = require('pg');
 
-const isSupabase = process.env.DB_HOST && process.env.DB_HOST.includes('supabase.co');
+const isSupabase = process.env.DB_HOST && (
+  process.env.DB_HOST.includes('supabase.co') ||
+  process.env.DB_HOST.includes('pooler.supabase.com')
+);
 
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 5432,
+  host:     process.env.DB_HOST || 'localhost',
+  port:     parseInt(process.env.DB_PORT) || 5432,
   database: process.env.DB_NAME || 'postgres',
-  user: process.env.DB_USER || 'postgres',
+  user:     process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
   max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-  // Supabase requires SSL
+  idleTimeoutMillis:       30000,
+  connectionTimeoutMillis: 10000,
   ssl: isSupabase ? { rejectUnauthorized: false } : false,
 });
 

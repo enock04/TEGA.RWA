@@ -66,4 +66,17 @@ const getAll = async (req, res, next) => {
   }
 };
 
-module.exports = { create, getSummary, getMyBookings, cancel, getAll };
+const createBatch = async (req, res, next) => {
+  try {
+    const { scheduleId, passengers } = req.body;
+    if (!Array.isArray(passengers) || passengers.length < 1) {
+      return res.status(400).json({ message: 'passengers array is required' });
+    }
+    const bookings = await bookingsService.createBatchBookings({ userId: req.user.id, scheduleId, passengers });
+    return created(res, { bookings }, `${bookings.length} booking(s) created. Complete payment within 15 minutes.`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { create, createBatch, getSummary, getMyBookings, cancel, getAll };

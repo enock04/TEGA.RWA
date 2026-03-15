@@ -86,4 +86,49 @@ const setUserStatus = async (userId, isActive) => {
   return result.rows[0];
 };
 
-module.exports = { getProfile, updateProfile, getAllUsers, setUserStatus };
+const updateUser = async (userId, { fullName, email, role }) => {
+  if (email) {
+    const existing = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
+    if (existing.rows.length) {
+      const err = new Error('Email already in use'); err.statusCode = 409; throw err;
+    }
+  }
+  const result = await query(
+    `UPDATE users
+     SET full_name  = COALESCE($1, full_name),
+         email      = COALESCE($2, email),
+         role       = COALESCE($3, role),
+         updated_at = NOW()
+     WHERE id = $4
+     RETURNING id, full_name, phone_number, email, role, is_active, created_at`,
+    [fullName || null, email || null, role || null, userId]
+  );
+  if (!result.rows.length) { const err = new Error('User not found'); err.statusCode = 404; throw err; }
+  return result.rows[0];
+};
+
+const createAgent = async ({ fullName, phoneNumber, email, password }) => {
+  const bcrypt = require('bcryptjs');
+  const { v4: uuidv4 } = require('uuid');
+
+  const existing = await query(
+    'SELECT id FROM users WHERE phone_number = $1',
+    [phoneNumber]
+  );
+  if (existing.rows.length) {
+    const err = new Error('Phone number already in use');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const result = await query(
+    `INSERT INTO users (id, full_name, phone_number, email, password_hash, role)
+     VALUES ($1, $2, $3, $4, $5, 'agency')
+     RETURNING id, full_name, phone_number, email, role, is_active, created_at`,
+    [uuidv4(), fullName, phoneNumber, email || null, passwordHash]
+  );
+  return result.rows[0];
+};
+
+module.exports = { getProfile, updateProfile, getAllUsers, setUserStatus, createAgent, updateUser };

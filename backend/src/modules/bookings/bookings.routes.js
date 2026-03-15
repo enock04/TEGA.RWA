@@ -53,6 +53,20 @@ router.post('/',
  *     summary: Get current user's bookings
  *     tags: [Bookings]
  */
+router.post('/batch',
+  authenticate,
+  [
+    body('scheduleId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid schedule ID'),
+    body('passengers').isArray({ min: 1 }).withMessage('passengers must be a non-empty array'),
+    body('passengers.*.seatId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid seat ID'),
+    body('passengers.*.passengerName').trim().notEmpty().withMessage('Passenger name is required'),
+    body('passengers.*.passengerPhone').trim().matches(/^\+?[0-9]{10,15}$/).withMessage('Invalid phone number'),
+    body('passengers.*.passengerEmail').optional().isEmail().normalizeEmail(),
+  ],
+  validate,
+  controller.createBatch
+);
+
 router.get('/my', authenticate, controller.getMyBookings);
 
 /**

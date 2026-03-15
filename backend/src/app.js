@@ -34,7 +34,7 @@ app.use(helmet({
 }));
 
 // ─── CORS — fail closed if origin not whitelisted ────────────────────────────
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http://localhost:3001')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
@@ -49,20 +49,22 @@ app.use(cors({
 }));
 
 // ─── Rate limiting ────────────────────────────
-// Global — 100 req / 15 min per IP
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Global — 500 req / 15 min per IP (dev), 100 (prod)
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX) || (isDev ? 500 : 100),
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api', limiter);
 
-// Auth endpoints — 20 req / 15 min per IP
+// Auth endpoints — 50 req / 15 min (dev), 20 (prod)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: isDev ? 50 : 20,
   message: { success: false, message: 'Too many auth attempts, please try again later.' },
 });
 app.use('/api/v1/auth/login', authLimiter);

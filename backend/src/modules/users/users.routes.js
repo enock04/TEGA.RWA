@@ -37,6 +37,31 @@ router.put('/profile',
  */
 router.get('/', authenticate, authorize('admin'), controller.getAllUsers);
 
+router.post('/agents',
+  authenticate,
+  authorize('admin'),
+  [
+    body('fullName').trim().isLength({ min: 2, max: 100 }).withMessage('Full name required'),
+    body('phoneNumber').trim().isLength({ min: 10 }).withMessage('Valid phone number required'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+    body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail(),
+  ],
+  validate,
+  controller.createAgent
+);
+
+router.put('/:id',
+  authenticate,
+  authorize('admin'),
+  [
+    body('fullName').optional().trim().isLength({ min: 2, max: 100 }),
+    body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail(),
+    body('role').optional().isIn(['passenger', 'agency', 'admin']),
+  ],
+  validate,
+  controller.updateUser
+);
+
 router.patch('/:id/status',
   authenticate,
   authorize('admin'),
