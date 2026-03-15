@@ -322,7 +322,7 @@ All routes require `role = admin`.
 | Auth tokens | Separate secrets for access (1 h) and refresh (30 d) tokens |
 | Account lockout | 5 failed logins → 15-minute lockout; resets on success |
 | Rate limiting | Global: 100 req/15 min · Auth: 20 req/15 min · Bookings/Payments: 30 req/hr |
-| CORS | Strict origin whitelist from `FRONTEND_URL`; fail-closed if origin not listed |
+| CORS | Strict origin whitelist from `FRONTEND_URL`; Vercel preview URLs (`tega-rwa-*.vercel.app`) allowed via regex; fail-closed for all other origins |
 | Webhook | `X-Webhook-Secret` header required; requests rejected if secret unconfigured |
 | Input validation | All inputs validated with `express-validator`; pagination capped at 100 |
 | Password hashing | bcrypt, cost factor 12 |
@@ -541,4 +541,4 @@ docker compose up -d --build --force-recreate
 
 ---
 
-*Last updated: March 2026 · MVP feature-complete · Unified Staff Portal (agency + admin in one app) · Backend on Render · Frontends on Vercel · Core flows (search → book → pay → ticket) end-to-end functional*
+*Last updated: March 2026 · MVP feature-complete · Unified Staff Portal (agency + admin in one app) · Backend on Render · Frontends on Vercel · CORS supports Vercel preview deployments · Core flows (search → book → pay → ticket) end-to-end functional*

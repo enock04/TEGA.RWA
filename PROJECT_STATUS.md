@@ -6,7 +6,7 @@
 
 ## Status
 
-**On Track — MVP deployed to production (Vercel + Render). Staff portal routing, authentication, and Vercel build pipeline are stable. Core booking, payment, and ticketing flows are live for passengers.**
+**On Track — MVP deployed to production (Vercel + Render). Staff portal routing, authentication, and Vercel build pipeline are stable. Core booking, payment, and ticketing flows are live for passengers. CORS fix deployed to allow all Vercel preview deployment URLs.**
 
 ---
 
@@ -38,6 +38,7 @@
 - Full API coverage across 9 modules: Auth, Users, Stations, Routes, Buses, Schedules, Bookings, Payments, Tickets
 - Admin module: dashboard stats, revenue reports, agency management (CRUD + activate/deactivate)
 - Rate limiting, CORS whitelist, helmet security headers, parameterised SQL queries throughout
+- Fixed CORS to allow all Vercel preview deployment URLs via regex pattern (`tega-rwa-*.vercel.app`); production URL whitelist (`FRONTEND_URL`) remains enforced for all other origins
 
 ---
 
@@ -65,7 +66,7 @@
 | Medium | Configure Africa's Talking SMS gateway | Replace console.log token with real SMS delivery |
 | Medium | Add `agency_id` column to `users` table (migration) | Enables per-agency data scoping, staff management, and correct user counts |
 | Medium | Scope agency API endpoints by `agency_id` | Dashboard, buses, bookings, and reports must filter by the logged-in agency |
-| Medium | Verify `FRONTEND_URL` on Render includes both Vercel URLs | Required for CORS to allow staff portal and passenger app |
+| Medium | Verify `FRONTEND_URL` on Render includes both Vercel production URLs | Required for CORS; preview URLs now covered by regex pattern |
 | Low | Configure real email delivery (SMTP / SES) | Templates exist; just needs credentials wired in |
 | Low | Phone OTP verification on registration | Currently accepts any phone number without verification |
 | Low | Set `accessToken` cookie domain to `.tega.rw` | Required for seamless auth across subdomains in self-hosted deployment |
