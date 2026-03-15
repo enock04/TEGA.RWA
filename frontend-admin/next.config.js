@@ -34,7 +34,7 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      { source: '/', destination: '/admin', permanent: false },
+      { source: '/', destination: '/admin/login', permanent: false },
     ];
   },
   async headers() {

@@ -15,7 +15,6 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend-passenger
-      - frontend-agency
       - frontend-admin
       - backend
 
@@ -50,22 +49,7 @@ services:
     expose:
       - "3000"
 
-  # ─── Agency App ───────────────────────────────────────────────────────────
-  frontend-agency:
-    build:
-      context: ./frontend-agency
-      dockerfile: Dockerfile
-    container_name: tega_rw_agency
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      NEXT_PUBLIC_API_URL: https://api.tega.rw/api/v1
-    expose:
-      - "3000"
-
-  # ─── Admin App ────────────────────────────────────────────────────────────
+  # ─── Staff Portal / Admin App ─────────────────────────────────────────────
   frontend-admin:
     build:
       context: ./frontend-admin

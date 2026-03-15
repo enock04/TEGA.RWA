@@ -52,22 +52,7 @@ services:
     ports:
       - "3000:3000"
 
-  # ─── Agency App (port 3001) ───────────────────
-  frontend-agency:
-    build:
-      context: ./frontend-agency
-      dockerfile: Dockerfile
-    container_name: tega_rw_agency
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
-    ports:
-      - "3001:3000"
-
-  # ─── Admin App (port 3002) ────────────────────
+  # ─── Staff Portal / Admin App (port 3001) ────
   frontend-admin:
     build:
       context: ./frontend-admin
@@ -80,4 +65,4 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:5000/api/v1
     ports:
-      - "3002:3000"
+      - "3001:3000"
