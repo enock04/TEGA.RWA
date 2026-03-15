@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -54,9 +53,9 @@ function StaffLoginForm() {
     if (!isAuthenticated || !user) return;
     const next = params.get('next');
     // Only follow `next` if it matches the user's role section, otherwise use default
-    if (next && user.role === 'admin' && next.startsWith('/admin')) { router.replace(next); return; }
+    if (next && user.role === 'admin' && next.startsWith('/admin') && next !== '/admin/login') { router.replace(next); return; }
     if (next && user.role === 'agency' && next.startsWith('/agency')) { router.replace(next); return; }
-    if (user.role === 'admin') router.replace('/admin');
+    if (user.role === 'admin') router.replace('/admin/bookings');
     else if (user.role === 'agency') router.replace('/agency');
     else router.replace('/');
   }, [isAuthenticated, user, router, params]);
