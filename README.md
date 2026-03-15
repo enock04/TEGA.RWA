@@ -1,37 +1,65 @@
-# TEGA.Rw — Inter-Provincial Bus Ticket Booking System
+# TEGA.Rw — Rwanda Bus Ticketing Platform
 
-TEGA.Rw is a mobile-first web application that enables passengers to search, book, and pay for inter-provincial bus seats across Rwanda. It supports multiple payment methods (MTN MoMo, Airtel Money), digital ticket generation with QR codes, and an admin panel for managing routes, buses, schedules, users, and reports.
+A mobile-first web application that enables passengers to search, book, and pay for inter-provincial bus seats across Rwanda. Supports MTN MoMo, Airtel Money, digital QR-code tickets, a dedicated agency management portal, and a full system administration panel.
+
+---
+
+## Project Status
+
+**Current phase:** MVP — Feature Complete
+**Last updated:** March 2026
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Passenger app | ✅ Live (port 3000) | Search, multi-passenger booking, payment, tickets, dashboard |
+| Agency portal | ✅ Live (port 3001) | Fleet, schedules, bookings, reports, settings |
+| Admin panel | ✅ Live (port 3002) | Full system management, user roles, reports |
+| Backend API | ✅ Live (port 5000) | REST API with JWT auth, role guards, rate limiting |
+| Multi-passenger booking | ✅ Complete | 1–8 passengers, per-seat selection, batch atomic booking |
+| Role-based isolation | ✅ Complete | Separate apps per role, JWT-decoded middleware enforcement |
+| Mobile money payment | ⚠️ Mocked | Flow and UI complete; real MTN MoMo / Airtel integration pending |
+| SMS (password reset) | ⚠️ Mocked | Token logged to console; Africa's Talking integration pending |
+| Email delivery | ⚠️ Mocked | Templates ready; SMTP credentials needed |
+| Phone OTP verification | ❌ Not started | Registration accepts any phone without verification |
+| HTTPS | ❌ Not configured | Must be handled at reverse proxy / load balancer in production |
+| Shared auth across portals | ❌ Not configured | Production needs a shared cookie domain (e.g. `*.tega.rw`) |
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
+- [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [User Roles & Access](#user-roles--access)
+- [Passenger App (port 3000)](#passenger-app-port-3000)
+- [Agency Portal (port 3001)](#agency-portal-port-3001)
+- [Admin Panel (port 3002)](#admin-panel-port-3002)
 - [How It Works](#how-it-works)
-- [Current Functionalities](#current-functionalities)
+- [Feature Checklist](#feature-checklist)
 - [Security](#security)
-- [Non-Functional / Pending Features](#non-functional--pending-features)
-- [User Roles](#user-roles)
-- [Running the Application](#running-the-application)
-- [Available Routes & Test Data](#available-routes--test-data)
-- [API Summary](#api-summary)
-- [Known Issues](#known-issues)
+- [Backend API Reference](#backend-api-reference)
+- [Test Data & Seed](#test-data--seed)
+- [Development (without Docker)](#development-without-docker)
+- [Rebuilding after changes](#rebuilding-after-changes)
+- [Known Limitations](#known-limitations)
 
 ---
 
-## Overview
+## Architecture
 
-TEGA.Rw connects passengers with bus operators across Rwanda. A passenger can:
+The project is split into four independently deployable Docker services:
 
-1. Search for available buses between two cities on a chosen date
-2. Select a seat from a visual seat map
-3. Fill in passenger details and confirm a booking
-4. Pay via mobile money (MTN MoMo or Airtel Money)
-5. Receive a digital ticket with a unique ticket number and QR code for boarding
+```
+TEGA.RWA/
+├── backend/              Node.js / Express REST API     → port 5000
+├── frontend-passenger/   Passenger-facing Next.js app   → port 3000
+├── frontend-agency/      Agency management portal       → port 3001
+├── frontend-admin/       System administration panel    → port 3002
+└── frontend/             Legacy monolith (reference)
+```
 
-Admins and agency operators manage the entire fleet — routes, buses, schedules, stations, users, and bookings — through a dedicated admin dashboard with revenue reports.
+Each frontend is a fully standalone Next.js 14 build with its own Dockerfile, its own middleware that enforces role boundaries at the edge, and its own bundle — no shared runtime state between portals.
 
 ---
 
@@ -39,341 +67,346 @@ Admins and agency operators manage the entire fleet — routes, buses, schedules
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS |
-| State Management | Zustand |
-| Form Validation | React Hook Form + Zod |
-| HTTP Client | Axios (with auto token refresh interceptor) |
+| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
+| State | Zustand |
+| Forms | React Hook Form + Zod |
+| HTTP | Axios with auto token-refresh interceptor |
+| i18n | react-i18next (English, French, Kinyarwanda) |
 | Backend | Node.js + Express.js |
-| Database | PostgreSQL 15 |
-| Auth | JWT (access token 1h + refresh token 30d) |
+| Database | PostgreSQL 15 (hosted on Supabase) |
+| Auth | JWT — access token (1 h) + refresh token (30 d) |
 | QR Codes | `qrcode` npm package |
-| Email | Nodemailer (mocked in development) |
 | Containerisation | Docker + Docker Compose |
-| Notifications | react-hot-toast |
 
 ---
 
-## Project Structure
+## Quick Start
 
+### Prerequisites
+- Docker Desktop installed and running
+
+### Start everything
+
+```bash
+git clone <repo-url>
+cd TEGA.RWA
+
+docker compose up -d --build
 ```
-TEGA.RWA/
-├── docker-compose.yml          # Orchestrates all 3 containers
-├── backend/
-│   ├── migrations/
-│   │   ├── 001_initial.sql     # Full schema including lockout fields
-│   │   ├── 002_seed.sql        # Test data (stations, routes, buses, schedules)
-│   │   ├── 003_password_reset.sql  # Password reset tokens table
-│   │   └── 004_security.sql    # Account lockout columns (for existing DBs)
-│   └── src/
-│       ├── app.js              # Express entry point, middleware, rate limiting
-│       ├── modules/
-│       │   ├── auth/           # Register, login, refresh, change/forgot/reset password
-│       │   ├── users/          # Profile management, admin user listing
-│       │   ├── stations/       # Station CRUD
-│       │   ├── routes/         # Route management + schedule search
-│       │   ├── buses/          # Bus + seat management
-│       │   ├── schedules/      # Schedule management
-│       │   ├── bookings/       # Booking lifecycle (create, cancel, view)
-│       │   ├── payments/       # Mobile money payment flow + webhook
-│       │   ├── tickets/        # Ticket generation with QR codes
-│       │   └── admin/          # Dashboard stats + revenue reports
-│       └── middleware/         # Auth (JWT), role guards, validation, error handler
-└── frontend/
-    └── src/
-        ├── app/
-        │   ├── page.tsx            # Home / landing page with popular routes
-        │   ├── search/             # Bus search with sorting
-        │   ├── booking/            # Seat selection + booking summary
-        │   ├── payment/            # Mobile money payment with auto-polling
-        │   ├── ticket/             # Digital ticket with QR code
-        │   ├── dashboard/          # Passenger trip history
-        │   ├── profile/            # Edit profile + change password
-        │   ├── auth/               # Login, Register, Forgot/Reset Password
-        │   └── admin/              # Dashboard, routes, buses, schedules,
-        │                           # bookings, reports, stations, users
-        ├── components/
-        │   ├── layout/             # MainLayout, AppHeader, BottomNav,
-        │   │                       # AdminSidebar, mobile drawer
-        │   └── ui/                 # Spinner, Badge, EmptyState
-        ├── lib/api.ts              # All typed Axios API helpers
-        ├── middleware.ts           # Edge route protection (unauthenticated redirect)
-        └── store/authStore.ts      # Zustand auth store
-```
+
+### Access the apps
+
+| App | URL | For |
+|-----|-----|-----|
+| Passenger | http://localhost:3000 | Customers buying tickets |
+| Agency portal | http://localhost:3001 | Bus operators |
+| Admin panel | http://localhost:3002 | System administrators |
+| API | http://localhost:5000/api/v1 | — |
+| API Docs (dev) | http://localhost:5000/api/docs | — |
+
+---
+
+## User Roles & Access
+
+| Role | Login | Portal |
+|------|-------|--------|
+| `passenger` | http://localhost:3000/auth/login | Port 3000 |
+| `agency` | http://localhost:3001/admin/login | Port 3001 |
+| `admin` | http://localhost:3002/admin/login | Port 3002 |
+
+Role boundaries are enforced in two independent layers:
+1. **Next.js middleware (edge)** — decodes the JWT on every request and redirects users who visit the wrong portal
+2. **Backend API** — verifies the JWT signature and checks `authorize('admin', 'agency')` on every protected route
+
+Default role on registration is `passenger`. Admin and agency accounts must be created via the Admin → Users panel or seeded directly in the database.
+
+---
+
+## Passenger App (port 3000)
+
+| Route | Description |
+|-------|-------------|
+| `/` | Home — personalised greeting, popular routes, map |
+| `/search` | Search buses by route and date, sort by time or price |
+| `/booking/[scheduleId]` | Select 1–8 seats, enter per-passenger details |
+| `/booking/summary/[bookingId]` | Booking confirmation with group summary |
+| `/payment/[bookingId]` | Mobile money payment with auto-polling |
+| `/ticket/[bookingId]` | Digital e-ticket with QR code |
+| `/dashboard` | Personal booking history with status filters |
+| `/profile` | Edit profile and change password |
+| `/auth/login` | Passenger login |
+| `/auth/register` | New account registration |
+| `/auth/forgot-password` | Password reset via phone number |
+
+---
+
+## Agency Portal (port 3001)
+
+All routes require `role = agency`.
+
+| Route | Description |
+|-------|-------------|
+| `/agency` | Dashboard — revenue, booking stats, top routes |
+| `/agency/buses` | Fleet management — add, edit, delete buses |
+| `/agency/schedules` | Departure schedules — create, edit, cancel |
+| `/agency/bookings` | Passenger bookings on agency schedules |
+| `/agency/reports` | Revenue and booking reports with date range filter |
+| `/agency/settings` | Profile and password management |
+| `/admin/login` | Staff login (shared with admin app) |
+
+---
+
+## Admin Panel (port 3002)
+
+All routes require `role = admin`.
+
+| Route | Description |
+|-------|-------------|
+| `/admin` | System-wide dashboard — revenue, KPIs, recent bookings |
+| `/admin/buses` | Manage all buses across all agencies |
+| `/admin/routes` | Manage bus routes between stations |
+| `/admin/schedules` | Manage all departure schedules |
+| `/admin/bookings` | View all bookings system-wide with filters |
+| `/admin/stations` | Create, edit, delete stations |
+| `/admin/users` | User management — roles, activate/deactivate, create agents |
+| `/admin/reports` | Revenue by route, daily breakdown, date filter |
+| `/admin/settings` | Admin profile and password |
+| `/admin/login` | Staff login |
 
 ---
 
 ## How It Works
 
-### Passenger Flow
+### Passenger Booking Flow
 
 ```
 1. SEARCH
-   Select departure city, destination, travel date, and number of passengers
-   → results sorted by time or price (user choice)
+   Choose departure, destination, date, number of passengers
+   → results sorted by time or price
 
-2. RESULTS
-   Available schedules showing: departure/arrival times, duration,
-   bus name, available seats, price per seat
+2. SEAT SELECTION
+   Visual bus layout (2×2 grid) with colour-coded seats
+   Booked seats disabled; selected seats highlighted per-passenger
+   Up to 8 passengers per booking — each gets their own seat and form
 
-3. SEAT SELECTION
-   Visual bus layout with colour-coded seat classes
-   (Economy / Business / VIP) → fill in passenger details
+3. BOOKING CREATED  (POST /bookings/batch)
+   All seats reserved atomically in one DB transaction
+   15-minute expiry timer starts
 
-4. BOOKING CREATED
-   Pending booking with 15-minute expiry
-   → redirected to Booking Summary
+4. PAYMENT
+   Select MTN MoMo or Airtel Money → enter mobile number
+   Auto-polls status every 5 s → redirects on completion
+   Manual "I've Paid" fallback
 
-5. PAYMENT
-   Select MTN MoMo or Airtel Money → enter mobile money number
-   → payment prompt pushed to phone → enter PIN
-   → app auto-detects payment completion (polls every 5s)
-   → or manually confirm with "I've Paid" button
-
-6. TICKET
-   Payment confirmed → booking status "confirmed"
-   → digital ticket with unique number (TKT-YYYYMMDD-XXXX) and QR code
-   → print or present for boarding scan
+5. TICKET
+   Booking confirmed → digital ticket with unique number (TKT-YYYYMMDD-XXXX)
+   QR code encodes: booking ID, passenger, bus, route, seat, departure time
+   Print or present at boarding
 ```
 
-### Admin Flow
+### Staff Flow
 
 ```
-1. Login with role "admin" or "agency"
-2. Redirected to /admin dashboard (booking stats + revenue summary)
-3. Manage:
-   - Stations: create, edit, delete bus stations
-   - Routes: create and edit routes between stations
-   - Buses: register and edit buses with seat configuration
-   - Schedules: assign buses to routes with times and price; edit active schedules
-   - Bookings: view all bookings with filters by status and date
-   - Users: view all users, activate/deactivate accounts
-   - Reports: revenue by route, daily bookings over last 30 days
-4. Mobile-friendly: hamburger menu drawer on small screens
+1. Login at /admin/login — select Agency or Admin role
+2. Directed to the correct portal (port 3001 or 3002)
+3. Manage fleet, schedules, bookings, and reports
+4. Mobile-responsive: hamburger drawer on small screens
 ```
 
 ---
 
-## Current Functionalities
+## Feature Checklist
 
 ### Authentication & Account
 - [x] Passenger registration (full name, phone, optional email, password)
-- [x] Login with phone number and password
-- [x] JWT session: access token (1h) + refresh token (30d) with auto-refresh
-- [x] Role-based routing: passengers → home, admin/agency → admin panel
-- [x] Forgot password — request reset via phone number, enter code, set new password
-- [x] Change password (authenticated, requires current password)
-- [x] Account lockout after 5 consecutive failed logins (15 min cooldown)
+- [x] Login — phone number + password
+- [x] JWT session: access (1 h) + refresh (30 d) with auto-refresh on 401
+- [x] Role-based portal routing enforced at middleware level (JWT decode)
+- [x] Forgot password — phone-based reset token (token logged to console in dev)
+- [x] Change password (requires current password)
+- [x] Account lockout after 5 consecutive failed logins — 15-minute cooldown
 - [x] Edit profile (name, email)
-- [x] Sign out
-
-### Home Page (Authenticated Passengers)
-- [x] Personalised greeting
-- [x] Embedded OpenStreetMap centred on user's location (falls back to Kigali)
-- [x] Popular routes section with upcoming schedules and prices
 
 ### Bus Search
-- [x] Departure and destination station dropdowns
-- [x] Travel date picker
-- [x] Passengers selector (1–6)
-- [x] Results with times, duration, bus, seats left, price
-- [x] Sort results: Earliest / Latest / Price low–high / Price high–low
+- [x] Departure / destination station dropdowns
+- [x] Date picker
+- [x] Results: times, duration, bus, seats available, price per seat
+- [x] Sort: Earliest / Latest / Price low–high / Price high–low
 
-### Booking
-- [x] Visual seat map (Economy, Business, VIP — colour coded)
-- [x] Booked seats disabled
-- [x] Passenger details form (pre-filled from profile)
-- [x] 15-minute booking expiry timer
-- [x] Cancel pending bookings
+### Multi-Passenger Booking
+- [x] Select 1–8 passengers in a single booking flow
+- [x] Per-passenger seat selection with unique colour per passenger
+- [x] Pre-filled form for passenger 1 from logged-in user profile
+- [x] Per-passenger name, phone, optional email
+- [x] Disability / special assistance flag per passenger
+- [x] All bookings created atomically (`POST /bookings/batch`)
+- [x] Group booking summary page with shared payment link
 
 ### Payment
 - [x] MTN MoMo + Airtel Money initiation
-- [x] Step-by-step UI (form → waiting → confirming)
-- [x] Auto-polls payment status every 5 seconds — redirects automatically on completion
-- [x] Manual confirm button as fallback
-- [x] Shows error and resets on payment failure
+- [x] Auto-polls every 5 s — redirects automatically on completion
+- [x] Manual "I've Paid" confirm button as fallback
+- [x] Error state with reset on failure
 
-### Passenger Dashboard
-- [x] All bookings with status filter (All / Pending / Confirmed / Cancelled)
-- [x] Paginated (10 per page)
-- [x] Quick actions per booking: Pay, View Ticket, View Details
-
-### Ticket
-- [x] Ticket number, route, passenger, seat, bus, plate, departure time
-- [x] QR code (encodes booking ID, passenger, bus, route, departure, seat)
+### Tickets
+- [x] Unique ticket number per booking
+- [x] QR code (encodes booking details)
 - [x] Print button
 - [x] "Used" badge after validation
 
-### Admin — Dashboard
-- [x] Total bookings, confirmed, pending, cancelled counts
-- [x] Total revenue, total passengers
-- [x] Recent 5 bookings
-- [x] Top 5 routes by booking volume
+### Passenger Dashboard
+- [x] All bookings — filter by status, paginated (10/page)
+- [x] Actions per booking: Pay, View Ticket, View Details, Cancel
 
-### Admin — Reports
-- [x] Date range filter (from / to)
-- [x] Total bookings, revenue, passengers, avg ticket price
-- [x] Revenue breakdown by route
-- [x] Daily bookings chart data (last 30 days)
+### Agency Portal
+- [x] Dashboard with revenue, booking stats, top routes
+- [x] Fleet management (add / edit / delete buses)
+- [x] Schedule management (create / edit / cancel)
+- [x] Passenger bookings on agency schedules with filters and pagination
+- [x] Revenue reports with date range filter
+- [x] Profile and password settings
 
-### Admin — Stations
-- [x] List all stations
-- [x] Create new stations (name, city, province)
-- [x] Edit stations
-- [x] Delete stations
-
-### Admin — Routes
-- [x] List all routes
-- [x] Create and edit routes (departure/arrival stations, distance, duration)
-- [x] Delete routes
-
-### Admin — Buses
-- [x] List all buses
-- [x] Create and edit buses (plate, type, total seats)
-- [x] Delete buses
-
-### Admin — Schedules
-- [x] List all schedules with status, seat availability, price
-- [x] Create new schedules
-- [x] Edit active schedules (bus, route, times, price)
-- [x] Cancel schedules
-
-### Admin — Bookings
-- [x] View all bookings system-wide
-- [x] Filter by status and date
-- [x] Paginated table
-
-### Admin — Users
-- [x] View all registered users with search (name, phone, email)
-- [x] Role badges (admin / agency / passenger)
-- [x] Activate / deactivate accounts
+### Admin Panel
+- [x] System-wide dashboard — revenue, KPIs, booking breakdown
+- [x] Station CRUD
+- [x] Route CRUD (departure/arrival stations, distance, duration)
+- [x] Bus management (plate, type, total seats) — all agencies
+- [x] Schedule management — all agencies
+- [x] Booking management — filter by status and date, paginated
+- [x] User management — search, activate/deactivate, assign roles, create agents
+- [x] Revenue reports with date filter — by route and daily
 
 ---
 
 ## Security
 
-The following protections are in place:
-
 | Layer | Measure |
 |-------|---------|
-| Authentication | JWT with separate access (1h) and refresh (30d) secrets |
-| Account lockout | 5 failed logins → 15-minute lockout; auto-reset on success |
-| Rate limiting | Global: 100 req/15 min; Auth endpoints: 20 req/15 min; Bookings/payments: 30 req/hr |
-| CORS | Strict origin whitelist from `FRONTEND_URL` env var; fail-closed if origin not listed |
-| Webhook security | `POST /payments/webhook` requires `X-Webhook-Secret` header; rejects all calls if secret unconfigured |
-| Input validation | All inputs validated with `express-validator`; pagination capped at 100; search strings capped at 50 chars |
-| Password hashing | bcrypt with cost factor 12 |
-| Timing attack prevention | Fake bcrypt compare on unknown phone numbers during login |
-| Error handling | 500 errors always return generic message; passwords/tokens redacted from server logs; stack traces hidden in production |
-| Security headers | CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy (via `next.config.js`) |
-| Route protection | Next.js edge middleware blocks unauthenticated access to `/dashboard`, `/profile`, `/booking`, `/payment`, `/ticket`, `/admin` |
-| API docs | Swagger UI hidden in production; requires admin auth if enabled |
+| Auth tokens | Separate secrets for access (1 h) and refresh (30 d) tokens |
+| Account lockout | 5 failed logins → 15-minute lockout; resets on success |
+| Rate limiting | Global: 100 req/15 min · Auth: 20 req/15 min · Bookings/Payments: 30 req/hr |
+| CORS | Strict origin whitelist from `FRONTEND_URL`; fail-closed if origin not listed |
+| Webhook | `X-Webhook-Secret` header required; requests rejected if secret unconfigured |
+| Input validation | All inputs validated with `express-validator`; pagination capped at 100 |
+| Password hashing | bcrypt, cost factor 12 |
+| Timing attacks | Fake bcrypt compare on unknown phone numbers during login |
+| Error handling | 500s return generic messages; tokens/passwords redacted from logs |
+| Security headers | CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
+| Route protection | Next.js edge middleware decodes JWT and enforces role boundaries on every request |
 | SQL injection | All queries use parameterised statements — no string concatenation |
+| API docs | Swagger UI hidden behind admin auth in production |
 
-### Environment Variables Required in Production
+### Required environment variables for production
 
 | Variable | Purpose |
 |----------|---------|
-| `JWT_SECRET` | Access token signing secret (min 32 chars, unique) |
-| `JWT_REFRESH_SECRET` | Refresh token signing secret (different from JWT_SECRET) |
-| `WEBHOOK_SECRET` | Must match `X-Webhook-Secret` header from payment provider |
-| `FRONTEND_URL` | Comma-separated list of allowed CORS origins |
+| `JWT_SECRET` | Access token signing secret (min 32 chars, unique per environment) |
+| `JWT_REFRESH_SECRET` | Refresh token secret (must differ from `JWT_SECRET`) |
+| `WEBHOOK_SECRET` | Must match `X-Webhook-Secret` from payment provider |
+| `FRONTEND_URL` | Comma-separated allowed CORS origins |
 | `DB_PASSWORD` | PostgreSQL password |
 
 ---
 
-## Non-Functional / Pending Features
+## Backend API Reference
 
-### Known Limitations (MVP Scope)
+Base URL: `http://localhost:5000/api/v1`
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Real SMS delivery for password reset | Mocked | Token logged to server console in dev; in production, integrate Africa's Talking or similar |
-| Real mobile money processing | Mocked | MTN MoMo and Airtel Money initiation/confirmation is simulated; webhook validation is ready for real providers |
-| Email ticket delivery | Mocked | Email template is built; SMTP credentials needed in production |
-| Multi-seat booking | Not implemented | Passengers field is collected but only one seat can be selected per booking |
-| Phone number OTP verification | Not implemented | Registration accepts any phone number without verification |
-| Agency management UI | Not implemented | Backend placeholder exists; no frontend page |
-| HTTPS enforcement | Not implemented | Needs to be handled at the reverse proxy / load balancer level in production |
+### Auth
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/auth/register` | — | Register new passenger |
+| POST | `/auth/login` | — | Login → returns access + refresh tokens |
+| POST | `/auth/refresh` | — | Refresh access token |
+| GET | `/auth/profile` | user | Get current user profile |
+| PUT | `/auth/change-password` | user | Change password |
+| POST | `/auth/forgot-password` | — | Request password reset |
+| POST | `/auth/reset-password` | — | Reset with token |
+
+### Users
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/users/profile` | user | Get own profile |
+| PUT | `/users/profile` | user | Update profile |
+| GET | `/users` | admin | List all users |
+| PATCH | `/users/:id/status` | admin | Activate / deactivate |
+| PUT | `/users/:id` | admin | Update role or details |
+| POST | `/users/agents` | admin | Create agency account |
+
+### Buses
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/buses` | — | List all buses |
+| POST | `/buses` | admin, agency | Add bus |
+| PUT | `/buses/:id` | admin, agency | Update bus |
+| DELETE | `/buses/:id` | admin | Delete bus |
+| GET | `/buses/:id/seats` | — | Seat availability for a schedule |
+
+### Schedules
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/schedules` | — | List all schedules |
+| GET | `/schedules/:id` | — | Schedule detail |
+| POST | `/schedules` | admin, agency | Create schedule |
+| PUT | `/schedules/:id` | admin, agency | Update schedule |
+| DELETE | `/schedules/:id` | admin, agency | Cancel schedule |
+
+### Routes & Stations
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/routes` | — | List routes |
+| GET | `/routes/search` | — | Search schedules by route + date |
+| POST | `/routes` | admin | Create route |
+| PUT | `/routes/:id` | admin | Update route |
+| DELETE | `/routes/:id` | admin | Delete route |
+| GET | `/stations` | — | List stations |
+| POST | `/stations` | admin | Create station |
+| PUT | `/stations/:id` | admin | Update station |
+| DELETE | `/stations/:id` | admin | Delete station |
+
+### Bookings
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/bookings` | user | Create single booking |
+| POST | `/bookings/batch` | user | Create multi-passenger bookings (atomic) |
+| GET | `/bookings/my` | user | Own bookings |
+| GET | `/bookings/admin` | admin, agency | All bookings |
+| GET | `/bookings/:id/summary` | user | Booking summary |
+| DELETE | `/bookings/:id` | user | Cancel booking |
+
+### Payments
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/payments/initiate` | user | Initiate mobile money payment |
+| POST | `/payments/:id/confirm` | user | Manually confirm payment |
+| GET | `/payments/booking/:id` | user | Payment status for a booking |
+| GET | `/payments` | admin | All payments |
+| POST | `/payments/webhook` | webhook secret | Payment provider callback |
+
+### Tickets
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/tickets/:bookingId` | user | Get ticket for a booking |
+| GET | `/tickets/number/:number` | user | Get ticket by ticket number |
+| POST | `/tickets/validate/:number` | admin, agency | Mark ticket as used |
+| GET | `/tickets` | admin | All tickets |
+
+### Admin
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/admin/dashboard` | admin, agency | Dashboard statistics |
+| GET | `/admin/reports` | admin, agency | Revenue and booking reports |
 
 ---
 
-## User Roles
+## Test Data & Seed
 
-| Role | Access |
-|------|--------|
-| `passenger` | Search buses, book seats, pay, view tickets, manage own trips, edit profile |
-| `agency` | All passenger access + full admin panel (routes, buses, schedules, bookings, reports) |
-| `admin` | All agency access + user management, station management |
-
-Default role on registration is `passenger`. Admin/agency accounts must be created directly in the database or seeded.
-
----
-
-## Running the Application
-
-### Prerequisites
-- Docker Desktop installed and **running**
-
-### Start all services
-
-```bash
-docker compose up --build
-```
-
-This starts three containers:
-
-| Container | Service | Port |
-|-----------|---------|------|
-| `tega_rw_db` | PostgreSQL 15 | 5432 |
-| `tega_rw_backend` | Node.js / Express API | 5000 |
-| `tega_rw_frontend` | Next.js (standalone) | 3000 |
-
-### Access the app
-
-- **App:** http://localhost:3000
-- **API:** http://localhost:5000/api/v1
-- **API Docs (dev only):** http://localhost:5000/api/docs
-
-### Apply DB migrations (existing database)
-
-When the PostgreSQL volume already exists, new migrations must be applied manually:
-
-```bash
-# Password reset tokens table (003)
-docker exec tega_rw_db psql -U postgres -d tega_rw_db \
-  -f /docker-entrypoint-initdb.d/03_password_reset.sql
-
-# Account lockout columns (004)
-docker exec tega_rw_db psql -U postgres -d tega_rw_db \
-  -f /docker-entrypoint-initdb.d/04_security.sql
-```
-
-### Rebuild frontend after code changes
-
-```bash
-docker compose build --no-cache frontend && docker compose up -d
-```
-
-### Backend restarts automatically (hot-reload)
-
-The backend source is mounted as a volume — changes to `backend/src/` take effect immediately without a rebuild.
-
-### Database shell
-
-```bash
-docker exec -it tega_rw_db psql -U postgres -d tega_rw_db
-```
-
----
-
-## Available Routes & Test Data
-
-The database is seeded with the following on first run:
+The database is seeded on first run with:
 
 ### Stations (6)
 Kigali (Nyabugogo), Huye (Butare), Rubavu (Gisenyi), Musanze (Ruhengeri), Kayonza, Kicukiro
 
-### Routes (4)
+### Routes & Prices
 
 | Route | Base Price |
 |-------|-----------|
@@ -382,7 +415,7 @@ Kigali (Nyabugogo), Huye (Butare), Rubavu (Gisenyi), Musanze (Ruhengeri), Kayonz
 | Kigali → Musanze | RWF 3,000 |
 | Kigali → Kayonza | RWF 2,500 |
 
-### Buses (2)
+### Buses
 
 | Plate | Type | Seats |
 |-------|------|-------|
@@ -390,78 +423,78 @@ Kigali (Nyabugogo), Huye (Butare), Rubavu (Gisenyi), Musanze (Ruhengeri), Kayonz
 | RAB 002 A | Standard | 30 |
 
 ### Schedules
-Departures are seeded for **today through 3 days ahead** so testing is always possible without changing dates. Each route has at least one departure per day.
+Departures are seeded for today through 3 days ahead so testing never requires changing dates.
 
-### Test Accounts
+### Creating test accounts
 
-Create via registration at `/auth/register`, or insert directly:
+Register a passenger at `/auth/register`, then promote via Admin → Users, or insert directly:
 
 ```sql
--- Create an admin account (password: Admin1234)
+-- Create an admin (bcrypt hash of 'Admin1234' at cost 12)
 INSERT INTO users (id, full_name, phone_number, password_hash, role)
-VALUES (
-  gen_random_uuid(),
-  'Admin User',
-  '+250788000001',
-  '$2b$12$...', -- bcrypt hash of Admin1234
-  'admin'
-);
+VALUES (gen_random_uuid(), 'Admin User', '+250788000001',
+  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMeSSaLOd6aKpz1vWQwBt8vGAa', 'admin');
 ```
 
-### Testing Forgot Password (Dev Mode)
+### Testing forgot password (dev)
 
-Since SMS is mocked, the reset token is printed to the backend server log:
+The reset token is printed to the backend log since SMS is mocked:
 
 ```bash
 docker logs tega_rw_backend | grep "Password reset token"
 ```
 
-Copy the token and paste it into the reset code field on `/auth/forgot-password`.
+---
+
+## Development (without Docker)
+
+```bash
+# Backend — hot-reload via nodemon
+cd backend && npm install && npm run dev    # port 5000
+
+# Passenger app
+cd frontend-passenger && npm install && npm run dev         # port 3000
+
+# Agency portal
+cd frontend-agency && npm install && npm run dev -- -p 3001  # port 3001
+
+# Admin panel
+cd frontend-admin && npm install && npm run dev -- -p 3002   # port 3002
+```
+
+Create `backend/.env` with the variables listed in the Security section above.
 
 ---
 
-## API Summary
+## Rebuilding after changes
 
-Base URL: `http://localhost:5000/api/v1`
+```bash
+# Rebuild a single app
+docker compose up -d --build frontend-passenger --force-recreate
 
-| Module | Key Endpoints | Auth Required |
-|--------|--------------|---------------|
-| Auth | `POST /auth/register`, `/auth/login`, `/auth/refresh` | No |
-| Auth | `PUT /auth/change-password`, `GET /auth/profile` | User |
-| Auth | `POST /auth/forgot-password`, `/auth/reset-password` | No |
-| Users | `GET/PUT /users/profile` | User |
-| Users | `GET /users`, `PATCH /users/:id/status` | Admin |
-| Stations | `GET /stations` | No |
-| Stations | `POST /stations`, `PUT/DELETE /stations/:id` | Admin |
-| Routes | `GET /routes/search`, `GET /routes` | No |
-| Routes | `POST/PUT/DELETE /routes/:id` | Admin |
-| Buses | `GET /buses`, `GET /buses/:id/seats` | No |
-| Buses | `POST/PUT/DELETE /buses/:id` | Admin |
-| Schedules | `GET /schedules`, `GET /schedules/:id` | No |
-| Schedules | `POST /schedules`, `PUT /schedules/:id`, `DELETE /schedules/:id/cancel` | Admin |
-| Bookings | `POST /bookings`, `GET /bookings/my`, `GET /bookings/:id/summary` | User |
-| Bookings | `DELETE /bookings/:id` (cancel) | User (own) |
-| Bookings | `GET /bookings/admin` | Admin |
-| Payments | `POST /payments/initiate`, `POST /payments/:id/confirm` | User |
-| Payments | `GET /payments/booking/:bookingId` | User |
-| Payments | `POST /payments/webhook` | Webhook secret |
-| Payments | `GET /payments` | Admin |
-| Tickets | `GET /tickets/:bookingId`, `GET /tickets/number/:ticketNumber` | User |
-| Tickets | `POST /tickets/validate/:ticketNumber` | Admin/Agency |
-| Tickets | `GET /tickets` | Admin |
-| Admin | `GET /admin/dashboard`, `GET /admin/reports` | Admin/Agency |
+# Rebuild all frontends
+docker compose up -d --build frontend-passenger frontend-agency frontend-admin --force-recreate
+
+# Rebuild backend
+docker compose up -d --build backend --force-recreate
+
+# Rebuild everything
+docker compose up -d --build --force-recreate
+```
 
 ---
 
-## Known Issues
+## Known Limitations
 
-| Issue | Severity | Notes |
-|-------|----------|-------|
-| Forgot password requires checking server logs in dev | Low | SMS integration needed for production |
-| Multi-passenger booking not supported | Low | One booking per seat; workaround: repeat for each passenger |
-| No real payment provider integration | Medium | Both MTN MoMo and Airtel Money are fully mocked |
-| No HTTPS enforcement at app level | Low | Handle at reverse proxy / load balancer in production |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Real SMS (password reset) | Mocked | Token logged to console; integrate Africa's Talking or similar for production |
+| Real mobile money | Mocked | MTN MoMo and Airtel Money are simulated; webhook handler is ready |
+| Email delivery | Mocked | Template built; needs SMTP credentials |
+| Phone number OTP verification | Not implemented | Registration accepts any phone without verification |
+| HTTPS enforcement | Not implemented | Handle at reverse proxy / load balancer level |
+| Cookie sharing across portals | Not configured | In production, use subdomains under a shared parent domain (`*.tega.rw`) so the `accessToken` cookie is accessible to all portals without re-login |
 
 ---
 
-*Last updated: March 2026 — MVP feature-complete. Core flows (search → book → pay → ticket) are fully functional end-to-end. Security hardening applied. Production deployment requires real SMS/payment provider credentials and HTTPS.*
+*Last updated: March 2026 · MVP feature-complete · Three isolated frontend apps deployed · Core flows (search → book → pay → ticket) end-to-end functional · Outstanding: real SMS/payment providers, HTTPS, shared cookie domain for cross-portal auth*

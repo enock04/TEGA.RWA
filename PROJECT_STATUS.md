@@ -1,4 +1,4 @@
-Status: Running in Docker — All three containers healthy. Backend Phases 1–4 complete; frontend fully redesigned as mobile app; Docker deployment working. Ticket API and admin dashboard API remain.
+Status: Running in Docker — All four containers healthy (backend + 3 frontend apps). Backend Phases 1–6 complete; frontend split into three isolated Next.js apps with role-based JWT middleware; Docker deployment working.
 
 **📖 See [SETUP_GUIDE.md](SETUP_GUIDE.md) for complete installation and configuration instructions.**
 
@@ -8,10 +8,13 @@ Status: Running in Docker — All three containers healthy. Backend Phases 1–4
 docker compose up --build
 ```
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000/api/v1
-- **API Docs (Swagger)**: http://localhost:5000/api/v1/docs
-- **PostgreSQL**: localhost:5432
+| Service | URL | Role |
+|---------|-----|------|
+| Passenger app | http://localhost:3000 | Public / passengers |
+| Agency portal | http://localhost:3001 | Agency staff |
+| Admin panel | http://localhost:3002 | Admins |
+| Backend API | http://localhost:5000/api/v1 | — |
+| API Docs (Swagger) | http://localhost:5000/api/v1/docs | — |
 
 All services start automatically. Schema and seed data are applied on first boot.
 
@@ -24,17 +27,22 @@ All services start automatically. Schema and seed data are applied on first boot
 - Phase 2 (Search & Transport): Stations, Routes, Buses, and Schedules modules complete with full CRUD and the core bus search endpoint (search by departure station, destination, and travel date)
 - Phase 3 (Bookings): Seat booking with PostgreSQL row-level locking, 15-minute expiry, cancellation with seat restoration, and admin booking list
 - Phase 4 (Payments): Full payment lifecycle — initiate, confirm, and webhook handler for MTN MoMo and Airtel Money (mock); booking auto-confirmed on payment success
-- Frontend (Next.js + Tailwind CSS): All passenger and admin pages built with accessibility attributes
+- Phase 5 (Tickets): Real ticket routes wired — GET /tickets/:bookingId, GET /tickets/number/:ticketNumber, POST /tickets/validate/:ticketNumber; tickets auto-issued on payment confirmation
+- Phase 6 (Admin Dashboard API): dashboard stats, revenue reports, daily/route breakdowns; agency management endpoints stubbed (503)
+- Frontend Split (March 2026): Monolith split into three isolated Next.js apps — frontend-passenger/, frontend-agency/, frontend-admin/ — each with its own Dockerfile and Docker Compose service
+- Role-Based JWT Middleware: Each app enforces its own role boundary by decoding the JWT payload from the accessToken cookie (no client-side cookie race); agency and admin users are blocked from passenger routes and vice versa
 - Mobile App Redesign: Phone-frame shell (max-width 430px), sticky AppHeader with backHref support, fixed BottomNav, rounded-2xl inputs/buttons/cards across all pages
 - Auth Gate: Root page (/) is branded splash screen — unauthenticated users see Sign In / Create Account; authenticated users auto-redirected to /dashboard
 - App Rename: All references updated from IBTRS → TEGA.Rw across frontend, backend, docker-compose, env files
-- Docker Deployment (March 7, 2026): Full stack containerised — postgres:15-alpine DB, Node.js backend, Next.js standalone frontend; all three containers healthy and communicating
+- Docker Deployment: Full stack containerised — Supabase PostgreSQL, Node.js backend, three Next.js standalone frontends; all containers healthy and communicating
 
 ## Known Remaining Issues
 
 - MTN MoMo and Airtel Money providers are mocked — real sandbox credentials required before live payment testing
-- Backend tickets module not yet wired — ticket page will return errors until Phase 5 is complete
-- Backend admin module not yet built — admin pages will return errors until Phase 6 is complete
+- Agency management endpoints (POST/GET /admin/agencies) return 503 — not yet implemented
+- SMS (password reset OTP) is mocked — real SMS gateway credentials needed
+- Email delivery is mocked — real SMTP/SES credentials needed
+- HTTPS not configured — nginx reverse proxy or Caddy needed before production
 
 ## Progress
 
@@ -42,18 +50,25 @@ All services start automatically. Schema and seed data are applied on first boot
 [x] Phase 2 — Search & Transport (Stations, Routes, Buses, Schedules)
 [x] Phase 3 — Bookings (seat selection, expiry, cancellation)
 [x] Phase 4 — Payments (MTN MoMo, Airtel Money, webhook)
-[x] Frontend — Next.js + Tailwind CSS (all pages)
+[x] Phase 5 — Tickets API (real routes wired, auto-issued on payment)
+[x] Phase 6 — Admin Dashboard API (stats, revenue reports, route reports)
+[x] Frontend — Three isolated Next.js apps (passenger / agency / admin)
+[x] Role-Based Isolation — JWT middleware enforces role boundaries in each app
 [x] Mobile App Redesign — Phone frame, BottomNav, AppHeader, all pages rewritten
 [x] Auth Gate — Splash screen at /, auth redirects for authenticated users
 [x] App Rename — IBTRS → TEGA.Rw across all files
-[x] Infrastructure — Docker Compose with postgres, backend, frontend; fully working
+[x] Infrastructure — Docker Compose with backend + 3 frontend containers; fully working
 
-[ ] Phase 5 — Tickets API
-    - Replace tickets.routes.js stub with real routes
-    - Expose GET /tickets/booking/:bookingId, GET /tickets/:ticketNumber, POST /tickets/:ticketNumber/validate
-    - Tickets auto-issued on payment confirmation (service already written)
+[ ] Agency Management API
+    - Implement POST /admin/agencies and GET /admin/agencies (currently 503)
+    - Tie agency accounts to specific routes/buses
 
-[ ] Phase 6 — Admin Dashboard API
-    - Build admin.service.js and admin.controller.js
-    - Replace admin.routes.js stub with real endpoints
-    - Dashboard stats, revenue reports, booking reports, agency management
+[ ] Real Payment Integration
+    - Obtain MTN MoMo and Airtel Money sandbox credentials
+    - Replace mock payment service with live API calls
+
+[ ] Production Hardening
+    - HTTPS via nginx/Caddy reverse proxy
+    - Real SMS gateway (Africa's Talking or similar)
+    - Real email provider (SES / SendGrid)
+    - Environment-specific secrets management
