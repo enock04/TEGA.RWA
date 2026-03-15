@@ -38,10 +38,17 @@
 
 ## Challenges
 
+### Admin Portal
+- **Agency data not scoped to the agency** — the agency dashboard, buses, bookings, and reports pages all call the same global API endpoints as the admin (`adminApi.getDashboard()`, `busesApi.getAll()`, `adminApi.getReports()`). An agency user currently sees system-wide data instead of only their own agency's data
+- **No `agency_id` on the `users` table** — the database schema has no FK linking a user to a specific agency, so the backend cannot filter any data (buses, schedules, bookings, reports) to a specific agency even if the frontend requested it. Requires a schema migration before per-agency data scoping can be implemented
+- **`total_users` removed from agencies list** — the agencies management page no longer shows a staff count per agency because the original SQL had a broken cross-join (all agency users joined to every agency row). The count was removed as a fix; it will need to be re-added once `agency_id` is on the `users` table
+- **All bookings visible to agency users** — `GET /bookings/admin` allows both `admin` and `agency` roles, but the backend returns all bookings without filtering by agency. An agency user can currently see bookings that belong to other agencies
+- **Admin portal production 404 (resolved, fragile)** — required multiple rounds of fixes: JWT edge runtime decoding (`Buffer` → `atob`), route group restructuring (`(protected)`), and a forced Tailwind cache clear on Vercel. The underlying cause was architectural debt from the original monolith split; the fixes are now stable but any future restructuring of the `app/admin/` directory must preserve the route group
+
+### Infrastructure & Integrations
 - **Render free tier cold starts** — backend sleeps after 15 minutes of inactivity; first request after sleep takes ~30 seconds. API calls from both Vercel apps fail silently until the service wakes up
 - **Mocked payment providers** — MTN MoMo and Airtel Money integrations are simulated; real sandbox credentials not yet obtained, blocking live payment testing
 - **No real SMS gateway** — password reset tokens are currently logged to the server console instead of being delivered via SMS (Africa's Talking not yet configured)
-- **No per-agency user linkage in schema** — the `users` table has no `agency_id` column, making it impossible to count staff per agency or scope agency users to their organisation without a schema migration
 
 ---
 
