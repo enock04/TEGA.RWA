@@ -42,12 +42,17 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http:
   .map(o => o.trim())
   .filter(Boolean);
 
+// Allow Vercel preview deployments for known project slugs
+const vercelPreviewPattern = /^https:\/\/tega-rwa(-[a-z0-9]+)*(-[a-z0-9]+-ntwari-enocks-projects)?\.vercel\.app$/;
+
 app.use(cors({
   origin: (origin, cb) => {
     // Allow server-to-server (no origin)
     if (!origin) return cb(null, true);
     // In development, allow any localhost origin regardless of port
     if (isDev && /^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true);
+    // Allow Vercel preview deployments for this project
+    if (vercelPreviewPattern.test(origin)) return cb(null, true);
     // In production, enforce the explicit whitelist
     if (allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error(`CORS: origin ${origin} not allowed`));
