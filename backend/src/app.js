@@ -41,8 +41,12 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http:
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow server-to-server (no origin) and explicitly listed origins
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // Allow server-to-server (no origin)
+    if (!origin) return cb(null, true);
+    // In development, allow any localhost origin regardless of port
+    if (isDev && /^https?:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true);
+    // In production, enforce the explicit whitelist
+    if (allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,

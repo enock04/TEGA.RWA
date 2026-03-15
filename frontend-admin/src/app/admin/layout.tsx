@@ -29,14 +29,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/reports',   label: t('admin.reports') },
   ];
 
-  useEffect(() => { initFromStorage(); }, [initFromStorage]);
+  const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
+    if (isLoginPage) return;
+    initFromStorage();
+  }, [initFromStorage, isLoginPage]);
+
+  useEffect(() => {
+    if (isLoginPage) return;
     if (isLoading) return;
     if (!isAuthenticated) { router.push('/admin/login'); return; }
     if (user?.role === 'agency') { router.replace('/agency'); return; }
     if (user && user.role !== 'admin') { router.push('/'); }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isAuthenticated, user, router, isLoginPage]);
+
+  // Login page renders without sidebar/auth wrapper
+  if (isLoginPage) return <>{children}</>;
 
   // Show nothing until auth is resolved and user role is confirmed
   if (isLoading || !isAuthenticated || !user) return null;
