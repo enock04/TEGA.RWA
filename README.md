@@ -1,6 +1,6 @@
 # TEGA.Rw — Rwanda Bus Ticketing Platform
 
-A mobile-first web application that enables passengers to search, book, and pay for inter-provincial bus seats across Rwanda. Supports MTN MoMo, Airtel Money, digital QR-code tickets, a dedicated agency management portal, and a full system administration panel.
+A mobile-first web application that enables passengers to search, book, and pay for inter-provincial bus seats across Rwanda. Supports MTN MoMo, Airtel Money, digital QR-code tickets, a unified staff portal for agency and admin users, and a full system administration panel.
 
 ---
 
@@ -11,18 +11,18 @@ A mobile-first web application that enables passengers to search, book, and pay 
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Passenger app | ✅ Live (port 3000) | Search, multi-passenger booking, payment, tickets, dashboard |
-| Agency portal | ✅ Live (port 3001) | Fleet, schedules, bookings, reports, settings |
-| Admin panel | ✅ Live (port 3002) | Full system management, user roles, reports |
-| Backend API | ✅ Live (port 5000) | REST API with JWT auth, role guards, rate limiting |
+| Passenger app | ✅ Live | Search, multi-passenger booking, payment, tickets, dashboard |
+| Staff Portal | ✅ Live | Single app for both agency and admin users, role-based routing |
+| Backend API | ✅ Live | REST API with JWT auth, role guards, rate limiting |
+| Deployed to cloud | ✅ Live | Backend → Render · Frontends → Vercel |
+| Agency management API | ✅ Complete | Full CRUD + activate/deactivate via admin panel |
 | Multi-passenger booking | ✅ Complete | 1–8 passengers, per-seat selection, batch atomic booking |
-| Role-based isolation | ✅ Complete | Separate apps per role, JWT-decoded middleware enforcement |
+| Role-based isolation | ✅ Complete | JWT middleware enforces role per portal section |
 | Mobile money payment | ⚠️ Mocked | Flow and UI complete; real MTN MoMo / Airtel integration pending |
 | SMS (password reset) | ⚠️ Mocked | Token logged to console; Africa's Talking integration pending |
 | Email delivery | ⚠️ Mocked | Templates ready; SMTP credentials needed |
 | Phone OTP verification | ❌ Not started | Registration accepts any phone without verification |
 | HTTPS | ❌ Not configured | Must be handled at reverse proxy / load balancer in production |
-| Shared auth across portals | ❌ Not configured | Production needs a shared cookie domain (e.g. `*.tega.rw`) |
 
 ---
 
@@ -31,10 +31,10 @@ A mobile-first web application that enables passengers to search, book, and pay 
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Quick Start](#quick-start)
+- [Deployment](#deployment)
 - [User Roles & Access](#user-roles--access)
-- [Passenger App (port 3000)](#passenger-app-port-3000)
-- [Agency Portal (port 3001)](#agency-portal-port-3001)
-- [Admin Panel (port 3002)](#admin-panel-port-3002)
+- [Passenger App](#passenger-app)
+- [Staff Portal](#staff-portal)
 - [How It Works](#how-it-works)
 - [Feature Checklist](#feature-checklist)
 - [Security](#security)
@@ -48,18 +48,20 @@ A mobile-first web application that enables passengers to search, book, and pay 
 
 ## Architecture
 
-The project is split into four independently deployable Docker services:
-
 ```
 TEGA.RWA/
-├── backend/              Node.js / Express REST API     → port 5000
-├── frontend-passenger/   Passenger-facing Next.js app   → port 3000
-├── frontend-agency/      Agency management portal       → port 3001
-├── frontend-admin/       System administration panel    → port 3002
-└── frontend/             Legacy monolith (reference)
+├── backend/              Node.js / Express REST API
+├── frontend-passenger/   Passenger-facing Next.js app
+├── frontend-admin/       Staff Portal — agency + admin (unified)
+└── frontend/             Legacy monolith (reference only)
 ```
 
-Each frontend is a fully standalone Next.js 14 build with its own Dockerfile, its own middleware that enforces role boundaries at the edge, and its own bundle — no shared runtime state between portals.
+**Two frontends, not three.** The agency and admin portals are merged into a single Next.js app (`frontend-admin`) called the **Staff Portal**. A single login page (`/admin/login`) asks the user to select their role before signing in. After login, the JWT role determines which portal section they land in:
+
+- `agency` → `/agency/*` — green sidebar, fleet and booking management
+- `admin` → `/admin/*` — purple sidebar, system-wide management
+
+Next.js middleware (edge runtime) enforces this boundary on every request — wrong-role users are redirected to login regardless of how they navigate.
 
 ---
 
@@ -68,7 +70,7 @@ Each frontend is a fully standalone Next.js 14 build with its own Dockerfile, it
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
-| State | Zustand |
+| State | Zustand (with localStorage + cookie persistence) |
 | Forms | React Hook Form + Zod |
 | HTTP | Axios with auto token-refresh interceptor |
 | i18n | react-i18next (English, French, Kinyarwanda) |
@@ -77,6 +79,7 @@ Each frontend is a fully standalone Next.js 14 build with its own Dockerfile, it
 | Auth | JWT — access token (1 h) + refresh token (30 d) |
 | QR Codes | `qrcode` npm package |
 | Containerisation | Docker + Docker Compose |
+| Cloud hosting | Render (backend) · Vercel (frontends) |
 
 ---
 
@@ -85,24 +88,54 @@ Each frontend is a fully standalone Next.js 14 build with its own Dockerfile, it
 ### Prerequisites
 - Docker Desktop installed and running
 
-### Start everything
+### Start everything locally
 
 ```bash
 git clone <repo-url>
 cd TEGA.RWA
-
 docker compose up -d --build
 ```
 
-### Access the apps
+### Local URLs
 
 | App | URL | For |
 |-----|-----|-----|
 | Passenger | http://localhost:3000 | Customers buying tickets |
-| Agency portal | http://localhost:3001 | Bus operators |
-| Admin panel | http://localhost:3002 | System administrators |
+| Staff Portal | http://localhost:3001 | Agency staff and system admins |
 | API | http://localhost:5000/api/v1 | — |
-| API Docs (dev) | http://localhost:5000/api/docs | — |
+| API Docs | http://localhost:5000/api/docs | Swagger UI |
+
+---
+
+## Deployment
+
+The system is deployed on free-tier cloud services:
+
+| Service | Host | Notes |
+|---------|------|-------|
+| Backend API | [Render](https://render.com) | Free tier — sleeps after 15 min idle; first request after sleep takes ~30 s |
+| Passenger app | [Vercel](https://vercel.com) | Always on |
+| Staff Portal | [Vercel](https://vercel.com) | Always on |
+| Database | [Supabase](https://supabase.com) | Hosted PostgreSQL — always on |
+
+### Environment variables required on Vercel
+
+For both frontend projects, set:
+
+```
+NEXT_PUBLIC_API_URL=https://<your-render-backend>.onrender.com/api/v1
+```
+
+### Environment variables required on Render
+
+See `.env.production.example` in the repo root for the full list. Key variables:
+
+```
+DATABASE_URL=...
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+FRONTEND_URL=https://your-passenger.vercel.app,https://your-staff.vercel.app
+```
 
 ---
 
@@ -110,23 +143,23 @@ docker compose up -d --build
 
 | Role | Login | Portal |
 |------|-------|--------|
-| `passenger` | http://localhost:3000/auth/login | Port 3000 |
-| `agency` | http://localhost:3001/admin/login | Port 3001 |
-| `admin` | http://localhost:3002/admin/login | Port 3002 |
+| `passenger` | `/auth/login` (passenger app) | Passenger app |
+| `agency` | `/admin/login` (Staff Portal) — select "Agency" | `/agency/*` |
+| `admin` | `/admin/login` (Staff Portal) — select "Admin" | `/admin/*` |
 
 Role boundaries are enforced in two independent layers:
-1. **Next.js middleware (edge)** — decodes the JWT on every request and redirects users who visit the wrong portal
-2. **Backend API** — verifies the JWT signature and checks `authorize('admin', 'agency')` on every protected route
+1. **Next.js middleware (edge)** — decodes JWT on every request; wrong-role users redirected to login
+2. **Backend API** — verifies JWT signature and checks `authorize('admin', 'agency')` on every protected route
 
-Default role on registration is `passenger`. Admin and agency accounts must be created via the Admin → Users panel or seeded directly in the database.
+Default role on registration is `passenger`. Agency and admin accounts must be created via Admin → Users or seeded directly in the database.
 
 ---
 
-## Passenger App (port 3000)
+## Passenger App
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — personalised greeting, popular routes, map |
+| `/` | Home — personalised greeting, popular routes |
 | `/search` | Search buses by route and date, sort by time or price |
 | `/booking/[scheduleId]` | Select 1–8 seats, enter per-passenger details |
 | `/booking/summary/[bookingId]` | Booking confirmation with group summary |
@@ -140,7 +173,11 @@ Default role on registration is `passenger`. Admin and agency accounts must be c
 
 ---
 
-## Agency Portal (port 3001)
+## Staff Portal
+
+One app, two portal sections. Login at `/admin/login`, select your role.
+
+### Agency section (`/agency/*`) — green sidebar
 
 All routes require `role = agency`.
 
@@ -149,20 +186,18 @@ All routes require `role = agency`.
 | `/agency` | Dashboard — revenue, booking stats, top routes |
 | `/agency/buses` | Fleet management — add, edit, delete buses |
 | `/agency/schedules` | Departure schedules — create, edit, cancel |
-| `/agency/bookings` | Passenger bookings on agency schedules |
+| `/agency/bookings` | Passenger bookings on agency schedules, filters + pagination |
 | `/agency/reports` | Revenue and booking reports with date range filter |
 | `/agency/settings` | Profile and password management |
-| `/admin/login` | Staff login (shared with admin app) |
 
----
-
-## Admin Panel (port 3002)
+### Admin section (`/admin/*`) — purple sidebar
 
 All routes require `role = admin`.
 
 | Route | Description |
 |-------|-------------|
 | `/admin` | System-wide dashboard — revenue, KPIs, recent bookings |
+| `/admin/agencies` | Agency CRUD — create, edit, activate/deactivate |
 | `/admin/buses` | Manage all buses across all agencies |
 | `/admin/routes` | Manage bus routes between stations |
 | `/admin/schedules` | Manage all departure schedules |
@@ -171,7 +206,7 @@ All routes require `role = admin`.
 | `/admin/users` | User management — roles, activate/deactivate, create agents |
 | `/admin/reports` | Revenue by route, daily breakdown, date filter |
 | `/admin/settings` | Admin profile and password |
-| `/admin/login` | Staff login |
+| `/admin/login` | Staff Portal login (shared entry point) |
 
 ---
 
@@ -186,7 +221,7 @@ All routes require `role = admin`.
 
 2. SEAT SELECTION
    Visual bus layout (2×2 grid) with colour-coded seats
-   Booked seats disabled; selected seats highlighted per-passenger
+   Booked seats disabled; selected seats highlighted per passenger
    Up to 8 passengers per booking — each gets their own seat and form
 
 3. BOOKING CREATED  (POST /bookings/batch)
@@ -195,7 +230,7 @@ All routes require `role = admin`.
 
 4. PAYMENT
    Select MTN MoMo or Airtel Money → enter mobile number
-   Auto-polls status every 5 s → redirects on completion
+   Auto-polls every 5 s → redirects on completion
    Manual "I've Paid" fallback
 
 5. TICKET
@@ -204,13 +239,14 @@ All routes require `role = admin`.
    Print or present at boarding
 ```
 
-### Staff Flow
+### Staff Login Flow
 
 ```
-1. Login at /admin/login — select Agency or Admin role
-2. Directed to the correct portal (port 3001 or 3002)
-3. Manage fleet, schedules, bookings, and reports
-4. Mobile-responsive: hamburger drawer on small screens
+1. Open Staff Portal → /admin/login
+2. Select role — "Agency" (green) or "Admin" (purple)
+3. Enter phone number + password
+4. JWT role validated → redirected to correct portal section
+5. Attempting to access the other section is blocked by edge middleware
 ```
 
 ---
@@ -221,8 +257,9 @@ All routes require `role = admin`.
 - [x] Passenger registration (full name, phone, optional email, password)
 - [x] Login — phone number + password
 - [x] JWT session: access (1 h) + refresh (30 d) with auto-refresh on 401
-- [x] Role-based portal routing enforced at middleware level (JWT decode)
-- [x] Forgot password — phone-based reset token (token logged to console in dev)
+- [x] Staff Portal — single login with Agency / Admin role selector
+- [x] Role-based routing enforced at Next.js edge middleware
+- [x] Forgot password — phone-based reset token (logged to console in dev)
 - [x] Change password (requires current password)
 - [x] Account lockout after 5 consecutive failed logins — 15-minute cooldown
 - [x] Edit profile (name, email)
@@ -268,6 +305,7 @@ All routes require `role = admin`.
 
 ### Admin Panel
 - [x] System-wide dashboard — revenue, KPIs, booking breakdown
+- [x] Agency CRUD — create, edit, activate/deactivate
 - [x] Station CRUD
 - [x] Route CRUD (departure/arrival stations, distance, duration)
 - [x] Bus management (plate, type, total seats) — all agencies
@@ -294,7 +332,7 @@ All routes require `role = admin`.
 | Security headers | CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
 | Route protection | Next.js edge middleware decodes JWT and enforces role boundaries on every request |
 | SQL injection | All queries use parameterised statements — no string concatenation |
-| API docs | Swagger UI hidden behind admin auth in production |
+| API docs | Swagger UI available in development only |
 
 ### Required environment variables for production
 
@@ -332,6 +370,15 @@ Base URL: `http://localhost:5000/api/v1`
 | PATCH | `/users/:id/status` | admin | Activate / deactivate |
 | PUT | `/users/:id` | admin | Update role or details |
 | POST | `/users/agents` | admin | Create agency account |
+
+### Agencies
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/admin/agencies` | admin | List all agencies (paginated + search) |
+| POST | `/admin/agencies` | admin | Create agency |
+| GET | `/admin/agencies/:id` | admin | Get agency by ID |
+| PUT | `/admin/agencies/:id` | admin | Update agency |
+| PATCH | `/admin/agencies/:id/status` | admin | Activate / deactivate agency |
 
 ### Buses
 | Method | Endpoint | Auth | Description |
@@ -430,15 +477,18 @@ Departures are seeded for today through 3 days ahead so testing never requires c
 Register a passenger at `/auth/register`, then promote via Admin → Users, or insert directly:
 
 ```sql
--- Create an admin (bcrypt hash of 'Admin1234' at cost 12)
+-- Admin user (password: Admin1234)
 INSERT INTO users (id, full_name, phone_number, password_hash, role)
 VALUES (gen_random_uuid(), 'Admin User', '+250788000001',
   '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMeSSaLOd6aKpz1vWQwBt8vGAa', 'admin');
+
+-- Agency user (password: Admin1234)
+INSERT INTO users (id, full_name, phone_number, password_hash, role)
+VALUES (gen_random_uuid(), 'Agency User', '+250788000002',
+  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMeSSaLOd6aKpz1vWQwBt8vGAa', 'agency');
 ```
 
 ### Testing forgot password (dev)
-
-The reset token is printed to the backend log since SMS is mocked:
 
 ```bash
 docker logs tega_rw_backend | grep "Password reset token"
@@ -450,16 +500,13 @@ docker logs tega_rw_backend | grep "Password reset token"
 
 ```bash
 # Backend — hot-reload via nodemon
-cd backend && npm install && npm run dev    # port 5000
+cd backend && npm install && npm run dev       # port 5000
 
 # Passenger app
-cd frontend-passenger && npm install && npm run dev         # port 3000
+cd frontend-passenger && npm install && npm run dev              # port 3000
 
-# Agency portal
-cd frontend-agency && npm install && npm run dev -- -p 3001  # port 3001
-
-# Admin panel
-cd frontend-admin && npm install && npm run dev -- -p 3002   # port 3002
+# Staff Portal (agency + admin)
+cd frontend-admin && npm install && npm run dev -- -p 3001       # port 3001
 ```
 
 Create `backend/.env` with the variables listed in the Security section above.
@@ -469,13 +516,9 @@ Create `backend/.env` with the variables listed in the Security section above.
 ## Rebuilding after changes
 
 ```bash
-# Rebuild a single app
+# Rebuild a single service
 docker compose up -d --build frontend-passenger --force-recreate
-
-# Rebuild all frontends
-docker compose up -d --build frontend-passenger frontend-agency frontend-admin --force-recreate
-
-# Rebuild backend
+docker compose up -d --build frontend-admin --force-recreate
 docker compose up -d --build backend --force-recreate
 
 # Rebuild everything
@@ -488,13 +531,13 @@ docker compose up -d --build --force-recreate
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Real SMS (password reset) | Mocked | Token logged to console; integrate Africa's Talking or similar for production |
-| Real mobile money | Mocked | MTN MoMo and Airtel Money are simulated; webhook handler is ready |
+| Real SMS (password reset) | Mocked | Token logged to console; integrate Africa's Talking or similar |
+| Real mobile money | Mocked | MTN MoMo and Airtel Money simulated; webhook handler is ready |
 | Email delivery | Mocked | Template built; needs SMTP credentials |
 | Phone number OTP verification | Not implemented | Registration accepts any phone without verification |
-| HTTPS enforcement | Not implemented | Handle at reverse proxy / load balancer level |
-| Cookie sharing across portals | Not configured | In production, use subdomains under a shared parent domain (`*.tega.rw`) so the `accessToken` cookie is accessible to all portals without re-login |
+| HTTPS enforcement | Not implemented | Handle at reverse proxy level in production |
+| Shared cookie domain | Not configured | For production subdomains, set cookie domain to `.tega.rw` |
 
 ---
 
-*Last updated: March 2026 · MVP feature-complete · Three isolated frontend apps deployed · Core flows (search → book → pay → ticket) end-to-end functional · Outstanding: real SMS/payment providers, HTTPS, shared cookie domain for cross-portal auth*
+*Last updated: March 2026 · MVP feature-complete · Unified Staff Portal (agency + admin in one app) · Backend on Render · Frontends on Vercel · Core flows (search → book → pay → ticket) end-to-end functional*

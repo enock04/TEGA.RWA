@@ -1,74 +1,118 @@
-Status: Running in Docker — All four containers healthy (backend + 3 frontend apps). Backend Phases 1–6 complete; frontend split into three isolated Next.js apps with role-based JWT middleware; Docker deployment working.
+# TEGA.Rw — Project Status
 
-**📖 See [SETUP_GUIDE.md](SETUP_GUIDE.md) for complete installation and configuration instructions.**
+**Last updated:** March 2026
+**Status:** MVP Feature-Complete — Deployed to Render + Vercel
 
-## Running the App
+---
 
-```bash
-docker compose up --build
+## Deployment
+
+| Service | Host | URL |
+|---------|------|-----|
+| Backend API | Render (free tier) | `https://<project>.onrender.com` |
+| Passenger app | Vercel | `https://<project>.vercel.app` |
+| Staff Portal (agency + admin) | Vercel | `https://<project>.vercel.app` |
+| Database | Supabase (PostgreSQL) | Hosted — always on |
+
+> Render free tier sleeps after 15 minutes of inactivity. First request after sleep takes ~30 seconds to wake the backend.
+
+---
+
+## Architecture
+
+Two frontends, not three. Agency and admin portals are merged into a single Next.js app (**Staff Portal** — `frontend-admin/`).
+
+```
+backend/              → Node.js/Express API, Supabase PostgreSQL
+frontend-passenger/   → Passenger booking app
+frontend-admin/       → Staff Portal: agency + admin in one app
+  /admin/login        → Shared login page with role selector (Agency / Admin)
+  /agency/*           → Agency section (green sidebar) — role=agency only
+  /admin/*            → Admin section (purple sidebar) — role=admin only
 ```
 
-| Service | URL | Role |
-|---------|-----|------|
-| Passenger app | http://localhost:3000 | Public / passengers |
-| Agency portal | http://localhost:3001 | Agency staff |
-| Admin panel | http://localhost:3002 | Admins |
-| Backend API | http://localhost:5000/api/v1 | — |
-| API Docs (Swagger) | http://localhost:5000/api/v1/docs | — |
+Next.js edge middleware enforces role boundaries on every request. Wrong-role users are redirected to `/admin/login`.
 
-All services start automatically. Schema and seed data are applied on first boot.
+---
 
-## Key Achievements
+## Completed Work
 
-- Project directory structure established for both backend (Node.js/Express) and frontend (Next.js)
-- Backend configuration complete: PostgreSQL connection pool, Swagger/OpenAPI setup, Winston logger, standardized response helpers
-- Middleware layer implemented: JWT authentication, role-based access control (passenger / agency / admin), request validation, and global error handling
-- Phase 1 (Auth & Users): Registration, login, token refresh, password change, and profile endpoints fully implemented with input validation and bcrypt password hashing
-- Phase 2 (Search & Transport): Stations, Routes, Buses, and Schedules modules complete with full CRUD and the core bus search endpoint (search by departure station, destination, and travel date)
-- Phase 3 (Bookings): Seat booking with PostgreSQL row-level locking, 15-minute expiry, cancellation with seat restoration, and admin booking list
-- Phase 4 (Payments): Full payment lifecycle — initiate, confirm, and webhook handler for MTN MoMo and Airtel Money (mock); booking auto-confirmed on payment success
-- Phase 5 (Tickets): Real ticket routes wired — GET /tickets/:bookingId, GET /tickets/number/:ticketNumber, POST /tickets/validate/:ticketNumber; tickets auto-issued on payment confirmation
-- Phase 6 (Admin Dashboard API): dashboard stats, revenue reports, daily/route breakdowns; agency management endpoints stubbed (503)
-- Frontend Split (March 2026): Monolith split into three isolated Next.js apps — frontend-passenger/, frontend-agency/, frontend-admin/ — each with its own Dockerfile and Docker Compose service
-- Role-Based JWT Middleware: Each app enforces its own role boundary by decoding the JWT payload from the accessToken cookie (no client-side cookie race); agency and admin users are blocked from passenger routes and vice versa
-- Mobile App Redesign: Phone-frame shell (max-width 430px), sticky AppHeader with backHref support, fixed BottomNav, rounded-2xl inputs/buttons/cards across all pages
-- Auth Gate: Root page (/) is branded splash screen — unauthenticated users see Sign In / Create Account; authenticated users auto-redirected to /dashboard
-- App Rename: All references updated from IBTRS → TEGA.Rw across frontend, backend, docker-compose, env files
-- Docker Deployment: Full stack containerised — Supabase PostgreSQL, Node.js backend, three Next.js standalone frontends; all containers healthy and communicating
+### Backend (Phases 1–6)
 
-## Known Remaining Issues
+- [x] **Phase 1 — Auth & Users:** Register, login, token refresh, password change, forgot/reset password, account lockout (5 attempts → 15 min), profile update
+- [x] **Phase 2 — Transport:** Stations, Routes, Buses, Schedules — full CRUD; bus search endpoint (departure, destination, date)
+- [x] **Phase 3 — Bookings:** Per-seat selection with row locking, 15-minute expiry, batch multi-passenger booking, cancellation with seat restoration
+- [x] **Phase 4 — Payments:** MTN MoMo + Airtel Money (mocked), webhook handler, booking auto-confirmed on payment success
+- [x] **Phase 5 — Tickets:** Unique ticket numbers (TKT-YYYYMMDD-XXXX), QR codes, ticket validation endpoint
+- [x] **Phase 6 — Admin Dashboard:** System-wide stats, revenue reports, route breakdowns, daily breakdowns
+- [x] **Agency Management API:** GET/POST `/admin/agencies`, GET/PUT `/admin/agencies/:id`, PATCH `/admin/agencies/:id/status`
 
-- MTN MoMo and Airtel Money providers are mocked — real sandbox credentials required before live payment testing
-- Agency management endpoints (POST/GET/PUT/PATCH /admin/agencies) — fully implemented
-- SMS (password reset OTP) is mocked — real SMS gateway credentials needed
-- Email delivery is mocked — real SMTP/SES credentials needed
-- HTTPS not configured — nginx reverse proxy or Caddy needed before production
+### Passenger Frontend (`frontend-passenger/`)
 
-## Progress
+- [x] Mobile-first design (max-width 430px phone frame), sticky AppHeader, fixed BottomNav
+- [x] Splash screen at `/` — unauthenticated: Sign In / Create Account; authenticated: redirect to dashboard
+- [x] Auth gate: JWT decoded from cookie, role-checked at edge middleware
+- [x] Search — departure, destination, date, passenger count; sort by time/price
+- [x] Multi-passenger booking — visual 2×2 seat map, per-passenger name/phone/disability flag, up to 8 passengers
+- [x] Payment — MTN MoMo / Airtel Money, auto-polls every 5s, manual confirm fallback
+- [x] Digital e-ticket with QR code and print button
+- [x] Passenger dashboard — booking history, status filter, action buttons (Pay, Ticket, Cancel)
+- [x] Profile — edit name/email, change password
+- [x] Forgot/reset password via phone number
+- [x] i18n — English, French, Kinyarwanda
 
-[x] Phase 1 — Auth & Users
-[x] Phase 2 — Search & Transport (Stations, Routes, Buses, Schedules)
-[x] Phase 3 — Bookings (seat selection, expiry, cancellation)
-[x] Phase 4 — Payments (MTN MoMo, Airtel Money, webhook)
-[x] Phase 5 — Tickets API (real routes wired, auto-issued on payment)
-[x] Phase 6 — Admin Dashboard API (stats, revenue reports, route reports)
-[x] Frontend — Three isolated Next.js apps (passenger / agency / admin)
-[x] Role-Based Isolation — JWT middleware enforces role boundaries in each app
-[x] Mobile App Redesign — Phone frame, BottomNav, AppHeader, all pages rewritten
-[x] Auth Gate — Splash screen at /, auth redirects for authenticated users
-[x] App Rename — IBTRS → TEGA.Rw across all files
-[x] Infrastructure — Docker Compose with backend + 3 frontend containers; fully working
+### Staff Portal (`frontend-admin/`)
 
-[x] Agency Management API
-    - GET/POST /admin/agencies, GET/PUT /admin/agencies/:id, PATCH /admin/agencies/:id/status
-    - Admin UI page at /admin/agencies with create, inline-edit, activate/deactivate
+- [x] Unified login at `/admin/login` — role selector (Agency green / Admin purple), routes to correct portal on login
+- [x] **Agency section** (`/agency/*`) — dashboard, fleet management, schedules, bookings, reports, settings
+- [x] **Admin section** (`/admin/*`) — dashboard, agencies, buses, routes, schedules, bookings, stations, users, reports, settings
+- [x] Edge middleware — protects both `/agency/*` and `/admin/*`, enforces correct role per section
+- [x] Responsive — hamburger drawer on mobile, fixed sidebar on desktop
+- [x] Agency management page — create, edit, activate/deactivate agencies with pagination and search
+- [x] i18n — English, French, Kinyarwanda
 
-[ ] Real Payment Integration
-    - Obtain MTN MoMo and Airtel Money sandbox credentials
-    - Replace mock payment service with live API calls
+### Infrastructure
 
-[ ] Production Hardening
-    - HTTPS via nginx/Caddy reverse proxy
-    - Real SMS gateway (Africa's Talking or similar)
-    - Real email provider (SES / SendGrid)
-    - Environment-specific secrets management
+- [x] Docker Compose — backend + 2 frontend containers (passenger + staff portal)
+- [x] Production Docker Compose — nginx reverse proxy, `expose` instead of `ports`, env_file
+- [x] `ENV HOSTNAME=0.0.0.0` in all frontend Dockerfiles (required for standalone Next.js in Docker)
+- [x] Deployed backend to Render with Supabase PostgreSQL
+- [x] Deployed frontends to Vercel with `NEXT_PUBLIC_API_URL` environment variable
+- [x] CSP headers include `https://*.onrender.com` for Vercel→Render API calls
+- [x] Security headers on all frontends: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+
+---
+
+## Pending / Known Issues
+
+| Item | Priority | Notes |
+|------|----------|-------|
+| Real MTN MoMo / Airtel Money | High | Obtain sandbox credentials; webhook handler already built |
+| Real SMS (Africa's Talking) | Medium | Password reset token currently logged to console |
+| Real email delivery | Low | Templates ready; needs SMTP/SES credentials |
+| Phone OTP verification on registration | Low | Currently accepts any phone number |
+| HTTPS in self-hosted production | Medium | Nginx config provided in `nginx/nginx.conf`; needs Let's Encrypt certs |
+| Shared cookie domain for multi-subdomain | Low | Set `accessToken` cookie domain to `.tega.rw` in production |
+
+---
+
+## Running Locally
+
+```bash
+# Docker (recommended)
+docker compose up --build -d
+
+# Without Docker
+cd backend && npm run dev          # port 5000
+cd frontend-passenger && npm run dev              # port 3000
+cd frontend-admin && npm run dev -- -p 3001       # port 3001 (Staff Portal)
+```
+
+## Local Access
+
+| App | URL |
+|-----|-----|
+| Passenger | http://localhost:3000 |
+| Staff Portal | http://localhost:3001/admin/login |
+| API | http://localhost:5000/api/v1 |
+| Swagger | http://localhost:5000/api/docs |

@@ -42,15 +42,20 @@ const STAFF_ROLES: { id: StaffRole; labelKey: string; descKey: string; icon: str
 function StaffLoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { setAuth, isAuthenticated, user } = useAuthStore();
+  const { setAuth, isAuthenticated, user, initFromStorage } = useAuthStore();
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<StaffRole>('agency');
 
+  // Hydrate auth state from localStorage so already-logged-in users are redirected
+  useEffect(() => { initFromStorage(); }, [initFromStorage]);
+
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     const next = params.get('next');
-    if (next) { router.replace(next); return; }
+    // Only follow `next` if it matches the user's role section, otherwise use default
+    if (next && user.role === 'admin' && next.startsWith('/admin')) { router.replace(next); return; }
+    if (next && user.role === 'agency' && next.startsWith('/agency')) { router.replace(next); return; }
     if (user.role === 'admin') router.replace('/admin');
     else if (user.role === 'agency') router.replace('/agency');
     else router.replace('/');
