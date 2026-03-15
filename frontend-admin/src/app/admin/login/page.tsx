@@ -45,6 +45,7 @@ function StaffLoginForm() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<StaffRole>('agency');
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   // Hydrate auth state from localStorage so already-logged-in users are redirected
   useEffect(() => { initFromStorage(); }, [initFromStorage]);
@@ -60,23 +61,26 @@ function StaffLoginForm() {
     else window.location.href = '/';
   }, [isAuthenticated, user, router, params]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
+    setRoleError(null);
     try {
       const res = await authApi.login(data);
       const { user: loggedInUser, accessToken, refreshToken } = res.data.data;
 
       // Validate that the credentials match the selected role
       if (loggedInUser.role !== selectedRole) {
-        toast.error(
+        const otherRole = selectedRole === 'admin' ? 'Agency' : 'Admin';
+        setRoleError(
           selectedRole === 'admin'
-            ? 'These are not admin credentials. Please select Agency or use admin credentials.'
-            : 'These are not agency credentials. Please select Admin or use agency credentials.'
+            ? `These credentials belong to an Agency account. Switch to the "${otherRole}" tab or use Admin credentials.`
+            : `These credentials belong to an Admin account. Switch to the "${otherRole}" tab or use Agency credentials.`
         );
+        setValue('password', '');
         return;
       }
 
@@ -116,7 +120,7 @@ function StaffLoginForm() {
               <button
                 key={role.id}
                 type="button"
-                onClick={() => setSelectedRole(role.id)}
+                onClick={() => { setSelectedRole(role.id); setRoleError(null); }}
                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
                   selectedRole === role.id
                     ? role.activeClass
@@ -165,6 +169,15 @@ function StaffLoginForm() {
             />
             {errors.password && <p className="error-text">{errors.password.message}</p>}
           </div>
+
+          {roleError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p>{roleError}</p>
+            </div>
+          )}
 
           <button
             type="submit"
