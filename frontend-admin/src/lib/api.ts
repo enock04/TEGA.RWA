@@ -40,7 +40,8 @@ api.interceptors.response.use(
       } catch {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/auth/login';
+        document.cookie = 'accessToken=; path=/; max-age=0';
+        window.location.href = '/admin/login';
       }
     }
     return Promise.reject(error);
