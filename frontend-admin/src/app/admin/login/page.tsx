@@ -169,9 +169,9 @@ function StaffLoginForm() {
         </form>
 
         <div className="mt-6 text-center">
-          <Link href="/auth/login" className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2">
+          <a href="https://tega-rwa.vercel.app/auth/login" className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-2">
             ← Customer login
-          </Link>
+          </a>
         </div>
       </div>
     </div>
