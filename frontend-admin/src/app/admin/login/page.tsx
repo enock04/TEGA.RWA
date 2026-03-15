@@ -53,11 +53,11 @@ function StaffLoginForm() {
     if (!isAuthenticated || !user) return;
     const next = params.get('next');
     // Only follow `next` if it matches the user's role section, otherwise use default
-    if (next && user.role === 'admin' && next.startsWith('/admin') && next !== '/admin/login') { router.replace(next); return; }
-    if (next && user.role === 'agency' && next.startsWith('/agency')) { router.replace(next); return; }
-    if (user.role === 'admin') router.replace('/admin/bookings');
-    else if (user.role === 'agency') router.replace('/agency');
-    else router.replace('/');
+    if (next && user.role === 'admin' && next.startsWith('/admin') && next !== '/admin/login') { window.location.href = next; return; }
+    if (next && user.role === 'agency' && next.startsWith('/agency')) { window.location.href = next; return; }
+    if (user.role === 'admin') window.location.href = '/admin/bookings';
+    else if (user.role === 'agency') window.location.href = '/agency';
+    else window.location.href = '/';
   }, [isAuthenticated, user, router, params]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
