@@ -1,20 +1,62 @@
 # TEGA.Rw — Project Status
 
 **Last updated:** 2026-03-15
-**Status:** MVP Feature-Complete — Deployed to Render + Vercel
 
 ---
 
-## Deployment
+## Status
 
-| Service | Host | URL |
-|---------|------|-----|
-| Backend API | Render (free tier) | `https://<project>.onrender.com` |
-| Passenger app | Vercel | `https://<project>.vercel.app` |
-| Staff Portal (agency + admin) | Vercel | `https://<project>.vercel.app` |
-| Database | Supabase (PostgreSQL) | Hosted — always on |
+**On Track — MVP deployed to production (Vercel + Render). Staff portal routing and authentication are stable. Core booking, payment, and ticketing flows are live for passengers.**
 
-> Render free tier sleeps after 15 minutes of inactivity. First request after sleep takes ~30 seconds to wake the backend.
+---
+
+## Key Achievements
+
+### Deployment & Infrastructure
+- Staff portal (agency + admin) and passenger app successfully deployed to Vercel; backend deployed to Render with Supabase PostgreSQL
+- Resolved critical Vercel build failure caused by stale Tailwind content cache after route group restructuring — fixed via `vercel.json` pre-build cache clear
+- Removed stale `frontend/` and `frontend-agency/` duplicate directories (98 files deleted), keeping the codebase clean
+- Nginx reverse proxy configured to serve `staff.tega.rw`, `agency.tega.rw`, and `admin.tega.rw` from a single `frontend-admin` upstream
+
+### Staff Portal — Auth & Routing
+- Fixed persistent production 404 on admin login: root cause was `app/admin/layout.tsx` returning `null` in App Router; resolved by restructuring admin pages into a `(protected)` route group so the login page is completely outside the admin layout
+- Fixed JWT decoding in Vercel edge runtime: replaced `Buffer.from()` with `atob()` + proper base64url padding — middleware now correctly reads roles in production
+- Admin dashboard (`/admin`) is now directly accessible; removed the erroneous redirect that was hiding the stats dashboard and sending all users to the bookings page instead
+- Login role validation upgraded: wrong-role login now shows a **prominent inline red error banner** (not just a small toast), clears the password field, and directs the user to the correct tab
+
+### Staff Portal — Bug Fixes
+- Fixed `getAgencies` SQL: removed a broken `LEFT JOIN users ON u.role='agency'` that had no agency FK, cross-joining all agency users to every agency row and producing wrong `total_users` counts
+- Fixed AdminSidebar logo link (`/` → `/admin`) to avoid routing through the login redirect
+- Fixed agency layout rendering children for wrong-role users — now shows a spinner while middleware handles the redirect
+
+### Backend
+- Full API coverage across 9 modules: Auth, Users, Stations, Routes, Buses, Schedules, Bookings, Payments, Tickets
+- Admin module: dashboard stats, revenue reports, agency management (CRUD + activate/deactivate)
+- Rate limiting, CORS whitelist, helmet security headers, parameterised SQL queries throughout
+
+---
+
+## Challenges
+
+- **Render free tier cold starts** — backend sleeps after 15 minutes of inactivity; first request after sleep takes ~30 seconds. API calls from both Vercel apps fail silently until the service wakes up
+- **Mocked payment providers** — MTN MoMo and Airtel Money integrations are simulated; real sandbox credentials not yet obtained, blocking live payment testing
+- **No real SMS gateway** — password reset tokens are currently logged to the server console instead of being delivered via SMS (Africa's Talking not yet configured)
+- **No per-agency user linkage in schema** — the `users` table has no `agency_id` column, making it impossible to count staff per agency or scope agency users to their organisation without a schema migration
+
+---
+
+## Next Steps
+
+| Priority | Task | Notes |
+|----------|------|-------|
+| High | Integrate real MTN MoMo / Airtel Money | Webhook handler already built; need sandbox API keys |
+| High | Upgrade Render to a paid tier or add a keep-alive ping | Eliminates cold-start failures in production |
+| Medium | Configure Africa's Talking SMS gateway | Replace console.log token with real SMS delivery |
+| Medium | Add `agency_id` column to `users` table (migration) | Enables per-agency staff management and correct user counts |
+| Medium | Verify `FRONTEND_URL` on Render includes both Vercel URLs | Required for CORS to allow staff portal and passenger app |
+| Low | Configure real email delivery (SMTP / SES) | Templates exist; just needs credentials wired in |
+| Low | Phone OTP verification on registration | Currently accepts any phone number without verification |
+| Low | Set `accessToken` cookie domain to `.tega.rw` | Required for seamless auth across subdomains in self-hosted deployment |
 
 ---
 
@@ -35,73 +77,20 @@ frontend-admin/       → Staff Portal: agency + admin in one app
     agency/           → Agency section (green sidebar) — role=agency only
 ```
 
-Next.js App Router route group `(protected)` scopes the admin layout to protected pages only — the login page is excluded, eliminating the need for `isLoginPage` hacks. Edge middleware enforces role boundaries on every request; wrong-role users are redirected to `/admin/login`.
+Next.js App Router route group `(protected)` scopes the admin layout to protected pages only. Edge middleware enforces role boundaries on every request; wrong-role users are redirected to `/admin/login`.
 
 ---
 
-## Completed Work
+## Deployment
 
-### Backend (Phases 1–6)
+| Service | Host | URL |
+|---------|------|-----|
+| Backend API | Render (free tier) | `https://<project>.onrender.com` |
+| Passenger app | Vercel | `https://tega-rwa.vercel.app` |
+| Staff Portal (agency + admin) | Vercel | `https://tega-rwa-staffportal.vercel.app` |
+| Database | Supabase (PostgreSQL) | Hosted — always on |
 
-- [x] **Phase 1 — Auth & Users:** Register, login, token refresh, password change, forgot/reset password, account lockout (5 attempts → 15 min), profile update
-- [x] **Phase 2 — Transport:** Stations, Routes, Buses, Schedules — full CRUD; bus search endpoint (departure, destination, date)
-- [x] **Phase 3 — Bookings:** Per-seat selection with row locking, 15-minute expiry, batch multi-passenger booking, cancellation with seat restoration
-- [x] **Phase 4 — Payments:** MTN MoMo + Airtel Money (mocked), webhook handler, booking auto-confirmed on payment success
-- [x] **Phase 5 — Tickets:** Unique ticket numbers (TKT-YYYYMMDD-XXXX), QR codes, ticket validation endpoint
-- [x] **Phase 6 — Admin Dashboard:** System-wide stats, revenue reports, route breakdowns, daily breakdowns
-- [x] **Agency Management API:** GET/POST `/admin/agencies`, GET/PUT `/admin/agencies/:id`, PATCH `/admin/agencies/:id/status`
-
-### Passenger Frontend (`frontend-passenger/`)
-
-- [x] Mobile-first design (max-width 430px phone frame), sticky AppHeader, fixed BottomNav
-- [x] Splash screen at `/` — unauthenticated: Sign In / Create Account; authenticated: redirect to dashboard
-- [x] Auth gate: JWT decoded from cookie, role-checked at edge middleware
-- [x] Search — departure, destination, date, passenger count; sort by time/price
-- [x] Multi-passenger booking — visual 2×2 seat map, per-passenger name/phone/disability flag, up to 8 passengers
-- [x] Payment — MTN MoMo / Airtel Money, auto-polls every 5s, manual confirm fallback
-- [x] Digital e-ticket with QR code and print button
-- [x] Passenger dashboard — booking history, status filter, action buttons (Pay, Ticket, Cancel)
-- [x] Profile — edit name/email, change password
-- [x] Forgot/reset password via phone number
-- [x] i18n — English, French, Kinyarwanda
-
-### Staff Portal (`frontend-admin/`)
-
-- [x] Unified login at `/admin/login` — role selector (Agency green / Admin purple), routes to correct portal on login
-- [x] **Role validation on login** — agency credentials rejected when Admin tab selected, and vice versa
-- [x] **Agency section** (`/agency/*`) — dashboard, fleet management, schedules, bookings, reports, settings
-- [x] **Admin section** (`/admin/*`) — dashboard, agencies, buses, routes, schedules, bookings, stations, users, reports, settings
-- [x] Edge middleware — JWT decoded via `atob()` (Vercel edge runtime compatible), protects `/agency/*` and `/admin/*`, enforces correct role per section
-- [x] Route group `(protected)` — admin layout wraps only protected pages; login page excluded entirely
-- [x] Responsive — hamburger drawer on mobile, fixed sidebar on desktop
-- [x] Agency management page — create, edit, activate/deactivate agencies with pagination and search
-- [x] i18n — English, French, Kinyarwanda
-
-### Infrastructure
-
-- [x] Docker Compose — backend + 2 frontend containers (passenger + staff portal)
-- [x] Production Docker Compose — nginx reverse proxy, `expose` instead of `ports`, env_file
-- [x] Dockerfiles use multi-stage build (`deps → builder → runner`) with `next start`; no standalone output required
-- [x] Nginx merges `staff.tega.rw`, `agency.tega.rw`, `admin.tega.rw` into single `frontend-admin` upstream
-- [x] Deployed backend to Render with Supabase PostgreSQL
-- [x] Deployed frontends to Vercel with `NEXT_PUBLIC_API_URL` environment variable
-- [x] `vercel.json` in `frontend-admin/` clears `.next/cache` before each build (prevents stale Tailwind content paths)
-- [x] CSP headers include `https://*.onrender.com` for Vercel→Render API calls
-- [x] Security headers on all frontends: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
-- [x] Removed stale `frontend/` and `frontend-agency/` directories (superseded by split architecture)
-
----
-
-## Pending / Known Issues
-
-| Item | Priority | Notes |
-|------|----------|-------|
-| Real MTN MoMo / Airtel Money | High | Obtain sandbox credentials; webhook handler already built |
-| Real SMS (Africa's Talking) | Medium | Password reset token currently logged to console |
-| Real email delivery | Low | Templates ready; needs SMTP/SES credentials |
-| Phone OTP verification on registration | Low | Currently accepts any phone number |
-| HTTPS in self-hosted production | Medium | Nginx config provided in `nginx/nginx.conf`; needs Let's Encrypt certs |
-| Shared cookie domain for multi-subdomain | Low | Set `accessToken` cookie domain to `.tega.rw` in production |
+> Render free tier sleeps after 15 minutes of inactivity. First request after sleep takes ~30 seconds to wake the backend.
 
 ---
 
@@ -112,9 +101,9 @@ Next.js App Router route group `(protected)` scopes the admin layout to protecte
 docker compose up --build -d
 
 # Without Docker
-cd backend && npm run dev          # port 5000
-cd frontend-passenger && npm run dev              # port 3000
-cd frontend-admin && npm run dev -- -p 3001       # port 3001 (Staff Portal)
+cd backend && npm run dev                        # port 5000
+cd frontend-passenger && npm run dev             # port 3000
+cd frontend-admin && npm run dev -- -p 3001      # port 3001 (Staff Portal)
 ```
 
 ## Local Access
