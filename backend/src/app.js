@@ -33,6 +33,9 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
+// ─── Environment ─────────────────────────────
+const isDev = process.env.NODE_ENV !== 'production';
+
 // ─── CORS — fail closed if origin not whitelisted ────────────────────────────
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http://localhost:3001')
   .split(',')
@@ -53,7 +56,6 @@ app.use(cors({
 }));
 
 // ─── Rate limiting ────────────────────────────
-const isDev = process.env.NODE_ENV !== 'production';
 
 // Global — 500 req / 15 min per IP (dev), 100 (prod)
 const limiter = rateLimit({
