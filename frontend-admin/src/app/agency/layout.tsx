@@ -29,7 +29,7 @@ export default function AgencyLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) { router.push('/admin/login'); return; }
-    if (user?.role === 'admin') { router.replace('/admin'); return; }
+    if (user?.role === 'admin') { window.location.href = '/admin'; return; }
     if (user && user.role !== 'agency') { router.push('/admin/login'); }
   }, [isLoading, isAuthenticated, user, router]);
 
@@ -46,10 +46,10 @@ export default function AgencyLayout({ children }: { children: React.ReactNode }
     </div>
   );
 
-  const handleLogout = () => { useAuthStore.getState().clearAuth(); router.replace('/admin/login'); };
+  const handleLogout = () => { useAuthStore.getState().clearAuth(); window.location.href = '/admin/login'; };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="agency-shell min-h-screen flex flex-col bg-gray-50">
       <header className="h-12 bg-white border-b border-gray-200 sticky top-0 z-50 flex items-center justify-end px-4 lg:px-6">
         <div className="relative">
           <button type="button" onClick={() => setProfileOpen(o => !o)}

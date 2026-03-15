@@ -53,12 +53,6 @@ export default function AgencyBusesPage() {
     } finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this bus?')) return;
-    try { await busesApi.delete(id); setBuses(b => b.filter(x => x.id !== id)); toast.success('Bus deleted'); }
-    catch { toast.error('Failed to delete bus'); }
-  };
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -128,9 +122,8 @@ export default function AgencyBusesPage() {
                   <td className="px-4 py-3 font-mono text-gray-600">{b.plate_number}</td>
                   <td className="px-4 py-3 text-gray-600 capitalize">{b.bus_type}</td>
                   <td className="px-4 py-3 text-gray-600">{b.total_seats}</td>
-                  <td className="px-4 py-3 text-right flex gap-3 justify-end">
+                  <td className="px-4 py-3 text-right">
                     <button type="button" onClick={() => openEdit(b)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                    <button type="button" onClick={() => handleDelete(b.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Delete</button>
                   </td>
                 </tr>
               ))}

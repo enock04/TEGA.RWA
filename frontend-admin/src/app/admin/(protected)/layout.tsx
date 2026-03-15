@@ -17,6 +17,7 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
   const [profileOpen, setProfileOpen] = useState(false);
 
   const mobileNavItems = [
+    { href: '/admin',           label: t('admin.dashboard'),    exact: true  },
     { href: '/admin/bookings',  label: t('admin.viewBookings'), exact: false },
     { href: '/admin/routes',    label: t('admin.routes') },
     { href: '/admin/buses',     label: t('admin.buses') },
@@ -37,7 +38,7 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="admin-shell min-h-screen flex flex-col bg-gray-50">
       <header className="h-12 bg-white border-b border-gray-200 sticky top-0 z-50 flex items-center justify-end px-4 lg:px-6">
         <div className="relative">
           <button type="button" onClick={() => setProfileOpen(o => !o)}
@@ -93,11 +94,11 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
             </div>
             <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
               {mobileNavItems.map(item => {
-                const active = pathname.startsWith(item.href);
                 return (
                   <Link key={item.href} href={item.href} onClick={() => setDrawerOpen(false)}
                     className={clsx('flex items-center px-3 py-2.5 rounded-lg text-sm transition-colors',
-                      active ? 'bg-blue-700 text-white font-medium' : 'text-gray-400 hover:bg-gray-800 hover:text-white')}>
+                      (item.exact ? pathname === item.href : pathname.startsWith(item.href))
+                        ? 'bg-blue-700 text-white font-medium' : 'text-gray-400 hover:bg-gray-800 hover:text-white')}>
                     {item.label}
                   </Link>
                 );
