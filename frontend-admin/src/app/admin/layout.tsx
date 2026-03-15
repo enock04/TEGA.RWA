@@ -47,9 +47,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Login page renders without sidebar/auth wrapper
   if (isLoginPage) return <>{children}</>;
 
-  // Show nothing until auth is resolved and user role is confirmed
-  if (isLoading || !isAuthenticated || !user) return null;
-  if (user.role !== 'admin') return null;
+  // Show spinner while auth is loading — never return null from a layout
+  if (isLoading || !isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (user.role !== 'admin') return <>{children}</>;
 
   const handleLogout = () => { useAuthStore.getState().clearAuth(); router.replace('/admin/login'); };
 

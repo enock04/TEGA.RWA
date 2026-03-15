@@ -33,8 +33,14 @@ export default function AgencyLayout({ children }: { children: React.ReactNode }
     if (user && user.role !== 'agency') { router.push('/admin/login'); }
   }, [isLoading, isAuthenticated, user, router]);
 
-  if (isLoading || !isAuthenticated || !user) return null;
-  if (user.role !== 'agency') return null;
+  if (isLoading || !isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (user.role !== 'agency') return <>{children}</>;
 
   const handleLogout = () => { useAuthStore.getState().clearAuth(); router.replace('/admin/login'); };
 
