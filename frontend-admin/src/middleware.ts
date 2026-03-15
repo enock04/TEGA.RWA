@@ -4,9 +4,11 @@ import type { NextRequest } from 'next/server';
 function getJwtRole(token: string): string | null {
   try {
     const payload = token.split('.')[1];
-    const decoded = JSON.parse(
-      Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-    );
+    // Convert base64url → base64, then add required padding
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    // Use atob — natively available in edge runtime (no Buffer polyfill needed)
+    const decoded = JSON.parse(atob(padded));
     return decoded?.role ?? null;
   } catch { return null; }
 }
