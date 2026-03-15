@@ -69,6 +69,17 @@ function StaffLoginForm() {
     try {
       const res = await authApi.login(data);
       const { user: loggedInUser, accessToken, refreshToken } = res.data.data;
+
+      // Validate that the credentials match the selected role
+      if (loggedInUser.role !== selectedRole) {
+        toast.error(
+          selectedRole === 'admin'
+            ? 'These are not admin credentials. Please select Agency or use admin credentials.'
+            : 'These are not agency credentials. Please select Admin or use agency credentials.'
+        );
+        return;
+      }
+
       setAuth(loggedInUser, accessToken, refreshToken);
       toast.success(`${t('auth.welcomeBack')}, ${loggedInUser.full_name.split(' ')[0]}!`);
     } catch (err: any) {
