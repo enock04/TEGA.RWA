@@ -1,5 +1,6 @@
 const authService = require('./auth.service');
 const { success, created, error } = require('../../utils/response');
+const { sendPasswordResetSMS } = require('../../utils/notifications');
 
 const register = async (req, res, next) => {
   try {
@@ -50,9 +51,13 @@ const forgotPassword = async (req, res, next) => {
   try {
     const { phoneNumber } = req.body;
     const token = await authService.forgotPassword(phoneNumber);
-    // In dev, log the token to server console only — never expose it in the response
-    if (process.env.NODE_ENV !== 'production' && token) {
-      require('../../utils/logger').info(`[DEV] Password reset token for ${phoneNumber}: ${token}`);
+    if (token) {
+      // In dev, log the token to server console only — never expose it in the response
+      if (process.env.NODE_ENV !== 'production') {
+        require('../../utils/logger').info(`[DEV] Password reset token for ${phoneNumber}: ${token}`);
+      }
+      // Send SMS (no-op/log-only if Africa's Talking is not configured)
+      await sendPasswordResetSMS(phoneNumber, token).catch(() => {}); // non-fatal
     }
     // Always return the same response regardless of whether the number exists (prevents enumeration)
     return success(res, {}, 'If this number is registered, a reset code has been sent');

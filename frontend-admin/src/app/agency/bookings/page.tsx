@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import Spinner from '@/components/ui/Spinner';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
-import { bookingsApi } from '@/lib/api';
+import { bookingsApi, paymentsApi } from '@/lib/api';
 
 interface Booking {
   id: string;
@@ -27,6 +27,7 @@ export default function AgencyBookingsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({ status: '', date: '' });
+  const [refunding, setRefunding] = useState<string | null>(null);
 
   const loadBookings = async () => {
     setLoading(true);
@@ -39,6 +40,20 @@ export default function AgencyBookingsPage() {
       setTotal(res.data.data.total);
     } catch { toast.error('Failed to load bookings'); }
     finally { setLoading(false); }
+  };
+
+  const handleRefund = async (bookingId: string) => {
+    if (!confirm('Refund this booking? This will cancel it and restore the seat.')) return;
+    setRefunding(bookingId);
+    try {
+      await paymentsApi.refund(bookingId);
+      setBookings(list => list.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b));
+      toast.success('Booking refunded');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Refund failed');
+    } finally {
+      setRefunding(null);
+    }
   };
 
   useEffect(() => { loadBookings(); }, [page, filters]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -95,7 +110,7 @@ export default function AgencyBookingsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {['Passenger', 'Phone', 'Route', 'Departure', 'Seat', 'Amount', 'Status'].map(h => (
+                  {['Passenger', 'Phone', 'Route', 'Departure', 'Seat', 'Amount', 'Status', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -112,6 +127,18 @@ export default function AgencyBookingsPage() {
                     <td className="px-4 py-3 text-gray-600">#{b.seat_number}</td>
                     <td className="px-4 py-3 font-semibold text-green-700">RWF {Number(b.amount).toLocaleString()}</td>
                     <td className="px-4 py-3"><Badge label={b.status} status={b.status} /></td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {b.status === 'confirmed' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRefund(b.id)}
+                          disabled={refunding === b.id}
+                          className="text-xs font-medium text-red-600 hover:text-red-800 disabled:opacity-50"
+                        >
+                          {refunding === b.id ? 'Refunding…' : 'Refund'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

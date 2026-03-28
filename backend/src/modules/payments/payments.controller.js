@@ -2,6 +2,21 @@ const paymentsService = require('./payments.service');
 const { success, created } = require('../../utils/response');
 const logger = require('../../utils/logger');
 
+const refund = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const isAdmin = ['admin', 'agency'].includes(req.user?.role);
+    const result = await paymentsService.refundPayment({
+      bookingId,
+      userId: req.user.id,
+      isAdmin,
+    });
+    return success(res, result, result.message);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const initiate = async (req, res, next) => {
   try {
     const { bookingId, method, payerPhone } = req.body;
@@ -73,4 +88,4 @@ const webhook = async (req, res, next) => {
   }
 };
 
-module.exports = { initiate, confirm, getByBooking, getAll, webhook };
+module.exports = { initiate, confirm, getByBooking, getAll, webhook, refund };

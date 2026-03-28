@@ -1,4 +1,4 @@
-const { getDashboard, getReports, getAgencies, getAgencyById, createAgency, updateAgency, toggleAgencyStatus } = require('./admin.service');
+const { getDashboard, getReports, getAgencies, getAgencyById, createAgency, updateAgency, toggleAgencyStatus, exportBookingsCSV, toCSV } = require('./admin.service');
 const { success, error } = require('../../utils/response');
 
 const dashboard = async (req, res) => {
@@ -70,4 +70,21 @@ const setAgencyStatus = async (req, res) => {
   }
 };
 
-module.exports = { dashboard, reports, listAgencies, addAgency, getAgency, editAgency, setAgencyStatus };
+const exportCSV = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const agencyId = req.user?.role === 'agency' ? req.user.agency_id : null;
+    const rows = await exportBookingsCSV({ from, to, agencyId });
+    const csv = toCSV(rows);
+    const filename = `bookings-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+    res.send('\uFEFF' + csv); // BOM so Excel opens with correct encoding
+  } catch (err) {
+    return error(res, err.message, err.statusCode || 500);
+  }
+};
+
+module.exports = { dashboard, reports, listAgencies, addAgency, getAgency, editAgency, setAgencyStatus, exportCSV };

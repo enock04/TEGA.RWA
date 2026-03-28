@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import Spinner from '@/components/ui/Spinner';
 import { adminApi } from '@/lib/api';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
 interface RouteRow { route_name: string; bookings: string | number; revenue: string | number; }
 interface DailyRow  { date: string;       bookings: string | number; revenue: string | number; }
 interface ReportsData {
@@ -17,6 +19,27 @@ export default function AgencyReportsPage() {
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ from: '', to: '' });
+
+  const handleExportCSV = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : '';
+      const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v)) as Record<string, string>;
+      const qs = Object.keys(params).length ? `?${new URLSearchParams(params).toString()}` : '';
+      const response = await fetch(`${API_URL}/admin/reports/export${qs}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to export CSV');
+    }
+  };
 
   const loadReports = async () => {
     setLoading(true);
@@ -58,6 +81,12 @@ export default function AgencyReportsPage() {
         {(filters.from || filters.to) && (
           <button type="button" onClick={() => { setFilters({ from: '', to: '' }); }} className="btn-admin-secondary">Clear</button>
         )}
+        <button type="button" onClick={handleExportCSV} className="btn-admin-secondary flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export CSV
+        </button>
       </div>
 
       {loading ? (

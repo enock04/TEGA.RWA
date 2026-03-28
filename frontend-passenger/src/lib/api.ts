@@ -126,17 +126,37 @@ export const paymentsApi = {
   confirm: (paymentId: string) => api.post(`/payments/${paymentId}/confirm`),
   getByBooking: (bookingId: string) => api.get(`/payments/booking/${bookingId}`),
   getAll: (params?: object) => api.get('/payments', { params }),
+  refund: (bookingId: string) => api.post(`/payments/booking/${bookingId}/refund`),
 };
 
 export const ticketsApi = {
   getByBooking: (bookingId: string) => api.get(`/tickets/${bookingId}`),
+  resend: (bookingId: string) => api.post(`/tickets/${bookingId}/resend`),
+  downloadPdfUrl: (bookingId: string) => `${API_URL}/tickets/${bookingId}/pdf`,
 };
 
 export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
   getReports: (params?: object) => api.get('/admin/reports', { params }),
+  exportCSVUrl: (params?: { from?: string; to?: string }) => {
+    const qs = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : '';
+    return `${API_URL}/admin/reports/export${qs}`;
+  },
   getAgencies: () => api.get('/admin/agencies'),
   createAgency: (data: object) => api.post('/admin/agencies', data),
+};
+
+export const agenciesApi = {
+  apply: (data: {
+    companyName: string;
+    contactName: string;
+    contactPhone: string;
+    contactEmail: string;
+    registrationNo?: string;
+    address?: string;
+    fleetSize?: number;
+    routesDescription?: string;
+  }) => api.post('/agencies/apply', data),
 };
 
 export const usersApi = {

@@ -1,6 +1,17 @@
 require('dotenv').config();
 // Force IPv4 — Docker containers may not have IPv6 routing to external hosts
 require('dns').setDefaultResultOrder('ipv4first');
+
+// ─── Sentry (must be initialised before any other imports) ───────────────────
+if (process.env.SENTRY_DSN) {
+  const Sentry = require('@sentry/node');
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  });
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -12,6 +23,8 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const expireBookingsJob = require('./jobs/expireBookings');
+const keepAliveJob = require('./jobs/keepAlive');
 const { authenticate, authorize } = require('./middleware/auth');
 
 const authRoutes = require('./modules/auth/auth.routes');
@@ -24,6 +37,7 @@ const bookingsRoutes = require('./modules/bookings/bookings.routes');
 const paymentsRoutes = require('./modules/payments/payments.routes');
 const ticketsRoutes = require('./modules/tickets/tickets.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
+const agenciesRoutes = require('./modules/agencies/agencies.routes');
 
 const app = express();
 
@@ -62,20 +76,21 @@ app.use(cors({
 
 // ─── Rate limiting ────────────────────────────
 
-// Global — 500 req / 15 min per IP (dev), 100 (prod)
+// Global — 1000 req / 15 min (dev), 300 (prod) — env var overrides prod only
+const globalMax = isDev ? 1000 : (parseInt(process.env.RATE_LIMIT_MAX) || 300);
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || (isDev ? 500 : 100),
+  max: globalMax,
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api', limiter);
 
-// Auth endpoints — 50 req / 15 min (dev), 20 (prod)
+// Auth endpoints — 100 req / 15 min (dev), 20 (prod)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 50 : 20,
+  max: isDev ? 100 : 20,
   message: { success: false, message: 'Too many auth attempts, please try again later.' },
 });
 app.use('/api/v1/auth/login', authLimiter);
@@ -83,14 +98,8 @@ app.use('/api/v1/auth/register', authLimiter);
 app.use('/api/v1/auth/forgot-password', authLimiter);
 app.use('/api/v1/auth/reset-password', authLimiter);
 
-// Booking/payment creation — 30 req / hour per IP (prevents spam bookings)
-const transactionLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
-  message: { success: false, message: 'Too many transactions, please try again later.' },
-});
-app.use('/api/v1/bookings', transactionLimiter);
-app.use('/api/v1/payments/initiate', transactionLimiter);
+// Booking/payment creation — 60 req / hour (dev), 30 (prod), POST only via route-level middleware
+// Applied per-method in the route files, NOT here, to avoid throttling GET /bookings/my
 
 // ─── Parsing and compression ──────────────────
 app.use(express.json({ limit: '10kb' }));
@@ -132,6 +141,7 @@ app.use(`${API}/bookings`, bookingsRoutes);
 app.use(`${API}/payments`, paymentsRoutes);
 app.use(`${API}/tickets`, ticketsRoutes);
 app.use(`${API}/admin`, adminRoutes);
+app.use(`${API}/agencies`, agenciesRoutes);
 
 // ─── 404 & Error handlers ─────────────────────
 app.use(notFoundHandler);
@@ -144,6 +154,8 @@ app.listen(PORT, () => {
   if (process.env.NODE_ENV !== 'production') {
     logger.info(`API Docs: http://localhost:${PORT}/api/docs`);
   }
+  expireBookingsJob.start();
+  keepAliveJob.start();
 });
 
 module.exports = app;

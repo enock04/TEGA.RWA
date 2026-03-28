@@ -53,12 +53,14 @@ const cancel = async (req, res, next) => {
 const getAll = async (req, res, next) => {
   try {
     const { page, limit, status, scheduleId, date } = req.query;
+    const agencyId = req.user?.role === 'agency' ? req.user.agency_id : null;
     const result = await bookingsService.getAllBookings({
       page: parseInt(page) || 1,
       limit: parseInt(limit) || 20,
       status,
       scheduleId,
       date,
+      agencyId,
     });
     return success(res, result);
   } catch (err) {

@@ -1,5 +1,33 @@
 const ticketsService = require('./tickets.service');
+const { generateTicketPDF } = require('../../utils/pdfTicket');
 const { success } = require('../../utils/response');
+
+const downloadPDF = async (req, res, next) => {
+  try {
+    const ticket = await ticketsService.getTicketByBooking(req.params.bookingId);
+    const pdfBuffer = await generateTicketPDF(ticket);
+    const filename = `ticket-${ticket.ticket_number}.pdf`;
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.send(pdfBuffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resend = async (req, res, next) => {
+  try {
+    const isAdminOrAgency = ['admin', 'agency'].includes(req.user?.role);
+    const userId = isAdminOrAgency ? null : req.user.id;
+    const result = await ticketsService.resendTicket(req.params.bookingId, userId);
+    return success(res, result, 'Ticket resent via SMS and email');
+  } catch (err) {
+    next(err);
+  }
+};
 
 const getByBooking = async (req, res, next) => {
   try {
@@ -42,4 +70,4 @@ const getAll = async (req, res, next) => {
   }
 };
 
-module.exports = { getByBooking, getByNumber, validate, getAll };
+module.exports = { getByBooking, getByNumber, validate, getAll, resend, downloadPDF };

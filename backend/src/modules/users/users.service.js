@@ -107,7 +107,7 @@ const updateUser = async (userId, { fullName, email, role }) => {
   return result.rows[0];
 };
 
-const createAgent = async ({ fullName, phoneNumber, email, password }) => {
+const createAgent = async ({ fullName, phoneNumber, email, password, agencyId }) => {
   const bcrypt = require('bcryptjs');
   const { v4: uuidv4 } = require('uuid');
 
@@ -123,10 +123,10 @@ const createAgent = async ({ fullName, phoneNumber, email, password }) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const result = await query(
-    `INSERT INTO users (id, full_name, phone_number, email, password_hash, role)
-     VALUES ($1, $2, $3, $4, $5, 'agency')
-     RETURNING id, full_name, phone_number, email, role, is_active, created_at`,
-    [uuidv4(), fullName, phoneNumber, email || null, passwordHash]
+    `INSERT INTO users (id, full_name, phone_number, email, password_hash, role, agency_id)
+     VALUES ($1, $2, $3, $4, $5, 'agency', $6)
+     RETURNING id, full_name, phone_number, email, role, agency_id, is_active, created_at`,
+    [uuidv4(), fullName, phoneNumber, email || null, passwordHash, agencyId || null]
   );
   return result.rows[0];
 };

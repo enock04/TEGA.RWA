@@ -241,4 +241,51 @@ const getAllTickets = async ({ page = 1, limit = 20, date } = {}) => {
   return { tickets: result.rows, total: parseInt(count.rows[0].count), page, limit };
 };
 
-module.exports = { issueTicket, getTicketByBooking, getTicketByNumber, validateTicket, getAllTickets };
+const resendTicket = async (bookingId, requestingUserId) => {
+  const ticket = await getTicketByBooking(bookingId);
+
+  // Only the booking owner or admin/agency can resend
+  if (requestingUserId !== null) {
+    const ownerCheck = await query('SELECT user_id FROM bookings WHERE id = $1', [bookingId]);
+    if (ownerCheck.rows.length && ownerCheck.rows[0].user_id !== requestingUserId) {
+      const err = new Error('Unauthorized to resend this ticket');
+      err.statusCode = 403;
+      throw err;
+    }
+  }
+
+  const departureFormatted = new Date(ticket.departure_time).toLocaleString('en-RW', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Kigali',
+  });
+
+  const notifications = [];
+
+  if (ticket.passenger_email) {
+    notifications.push(
+      sendTicketEmail({
+        to: ticket.passenger_email,
+        passengerName: ticket.passenger_name,
+        bookingId,
+        busName: ticket.bus_name,
+        route: `${ticket.departure_station} → ${ticket.arrival_station}`,
+        departureTime: departureFormatted,
+        seatNumber: `#${ticket.seat_number}`,
+        qrCodeDataUrl: ticket.qr_code_data,
+      }).catch(err => logger.error('Ticket resend email failed:', err))
+    );
+  }
+
+  notifications.push(
+    sendBookingConfirmationSMS(ticket.passenger_phone, {
+      bookingId: ticket.ticket_number,
+      busName: ticket.bus_name,
+      departureTime: departureFormatted,
+      seatNumber: `#${ticket.seat_number}`,
+    }).catch(err => logger.error('Ticket resend SMS failed:', err))
+  );
+
+  await Promise.all(notifications);
+  return { ticketNumber: ticket.ticket_number, sent: true };
+};
+
+module.exports = { issueTicket, getTicketByBooking, getTicketByNumber, validateTicket, getAllTickets, resendTicket };

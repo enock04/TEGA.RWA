@@ -1,44 +1,99 @@
 const nodemailer = require('nodemailer');
 const logger = require('./logger');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// ─── Email ────────────────────────────────────────────────────────────────────
+
+// Lazy transporter — only created when SMTP credentials are present
+let _transporter = null;
+
+const getTransporter = () => {
+  if (_transporter) return _transporter;
+
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return null;
+  }
+
+  _transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: parseInt(process.env.SMTP_PORT) === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  return _transporter;
+};
 
 const sendEmail = async ({ to, subject, html, text }) => {
-  if (process.env.NODE_ENV === 'development') {
-    logger.info(`[EMAIL MOCK] To: ${to} | Subject: ${subject}`);
-    logger.debug(`[EMAIL MOCK] Body: ${text || html}`);
-    return { messageId: `mock-${Date.now()}` };
+  const transporter = getTransporter();
+
+  if (!transporter) {
+    logger.warn(`[EMAIL] SMTP not configured — logging only. To: ${to} | Subject: ${subject}`);
+    logger.debug(`[EMAIL] Body: ${text || html}`);
+    return { messageId: `no-smtp-${Date.now()}` };
   }
 
   try {
     const info = await transporter.sendMail({
-      from: `"TEGA.Rw" <${process.env.EMAIL_FROM}>`,
+      from: `"TEGA.Rw" <${process.env.EMAIL_FROM || 'noreply@tega.rw'}>`,
       to,
       subject,
       html,
       text,
     });
-    logger.info(`Email sent: ${info.messageId}`);
+    logger.info(`[EMAIL] Sent to ${to} — messageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    logger.error('Email send failed:', err);
+    logger.error(`[EMAIL] Failed to send to ${to}:`, err.message);
     throw err;
   }
 };
 
-const sendSMS = async (phoneNumber, message) => {
-  // Mock SMS gateway for MVP — replace with actual provider (Africa's Talking, etc.)
-  logger.info(`[SMS MOCK] To: ${phoneNumber} | Message: ${message}`);
-  return { status: 'sent', messageId: `sms-mock-${Date.now()}` };
+// ─── SMS (Twilio) ─────────────────────────────────────────────────────────────
+
+let _twilioClient = null;
+
+const getTwilioClient = () => {
+  if (_twilioClient) return _twilioClient;
+
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+
+  if (!accountSid || !authToken || accountSid.startsWith('AC_mock')) {
+    return null;
+  }
+
+  _twilioClient = require('twilio')(accountSid, authToken);
+  return _twilioClient;
 };
+
+const sendSMS = async (phoneNumber, message) => {
+  const client = getTwilioClient();
+
+  if (!client) {
+    logger.warn(`[SMS] Twilio not configured — logging only. To: ${phoneNumber}`);
+    logger.info(`[SMS] Message: ${message}`);
+    return { status: 'not_sent', sid: `no-sms-${Date.now()}` };
+  }
+
+  try {
+    const result = await client.messages.create({
+      to: phoneNumber,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      body: message,
+    });
+
+    logger.info(`[SMS] Sent to ${phoneNumber} — SID: ${result.sid}, status: ${result.status}`);
+    return result;
+  } catch (err) {
+    logger.error(`[SMS] Failed to send to ${phoneNumber}:`, err.message);
+    throw err;
+  }
+};
+
+// ─── Templates ────────────────────────────────────────────────────────────────
 
 const sendTicketEmail = async ({ to, passengerName, bookingId, busName, route, departureTime, seatNumber, qrCodeDataUrl }) => {
   const html = `
@@ -92,4 +147,15 @@ const sendBookingConfirmationSMS = async (phoneNumber, { bookingId, busName, dep
   return sendSMS(phoneNumber, message);
 };
 
-module.exports = { sendEmail, sendSMS, sendTicketEmail, sendBookingConfirmationSMS };
+const sendPasswordResetSMS = async (phoneNumber, resetToken) => {
+  const message = `TEGA.Rw: Your password reset code is ${resetToken}. It expires in 15 minutes. If you did not request this, ignore this message.`;
+  return sendSMS(phoneNumber, message);
+};
+
+module.exports = {
+  sendEmail,
+  sendSMS,
+  sendTicketEmail,
+  sendBookingConfirmationSMS,
+  sendPasswordResetSMS,
+};

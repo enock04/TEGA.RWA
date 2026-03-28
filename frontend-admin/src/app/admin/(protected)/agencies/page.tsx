@@ -20,6 +20,19 @@ interface Agency {
   created_at: string;
 }
 
+interface Application {
+  id: string;
+  company_name: string;
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string;
+  fleet_size: number | null;
+  routes_description: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_at: string;
+  rejection_reason: string | null;
+}
+
 const EMPTY_FORM = {
   name: '',
   registrationNo: '',
@@ -29,25 +42,34 @@ const EMPTY_FORM = {
   logoUrl: '',
 };
 
+type Tab = 'agencies' | 'applications';
+
 export default function AdminAgenciesPage() {
+  const [tab, setTab] = useState<Tab>('agencies');
+
+  // ── Agencies tab state ──────────────────────────────────────────────────────
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-
-  // Create form
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-
-  // Edit
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [editSaving, setEditSaving] = useState(false);
-
   const LIMIT = 20;
 
+  // ── Applications tab state ──────────────────────────────────────────────────
+  const [apps, setApps] = useState<Application[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsTotal, setAppsTotal] = useState(0);
+  const [appsPage, setAppsPage] = useState(1);
+  const [appsStatus, setAppsStatus] = useState('pending');
+  const [actioning, setActioning] = useState<string | null>(null);
+
+  // ── Load agencies ───────────────────────────────────────────────────────────
   const load = async (p = 1, q = search) => {
     setLoading(true);
     try {
@@ -63,10 +85,27 @@ export default function AdminAgenciesPage() {
 
   useEffect(() => { load(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Load applications ───────────────────────────────────────────────────────
+  const loadApps = async (p = appsPage, status = appsStatus) => {
+    setAppsLoading(true);
+    try {
+      const res = await adminApi.getApplications({ page: p, limit: LIMIT, status: status || undefined });
+      setApps(res.data.data.applications ?? []);
+      setAppsTotal(res.data.data.total ?? 0);
+    } catch {
+      toast.error('Failed to load applications');
+    } finally {
+      setAppsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'applications') loadApps(1, appsStatus);
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Agency actions ──────────────────────────────────────────────────────────
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPage(1);
-    load(1, e.target.value);
+    setSearch(e.target.value); setPage(1); load(1, e.target.value);
   };
 
   const handleCreate = async () => {
@@ -83,28 +122,17 @@ export default function AdminAgenciesPage() {
       });
       setAgencies(a => [res.data.data.agency, ...a]);
       setTotal(t => t + 1);
-      setForm(EMPTY_FORM);
-      setShowForm(false);
+      setForm(EMPTY_FORM); setShowForm(false);
       toast.success('Agency created');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to create agency');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const openEdit = (a: Agency) => {
     setEditingId(a.id);
-    setEditForm({
-      name: a.name,
-      registrationNo: a.registration_no ?? '',
-      contactPhone: a.contact_phone ?? '',
-      contactEmail: a.contact_email ?? '',
-      address: a.address ?? '',
-      logoUrl: a.logo_url ?? '',
-    });
+    setEditForm({ name: a.name, registrationNo: a.registration_no ?? '', contactPhone: a.contact_phone ?? '', contactEmail: a.contact_email ?? '', address: a.address ?? '', logoUrl: a.logo_url ?? '' });
   };
-
   const cancelEdit = () => { setEditingId(null); setEditForm(EMPTY_FORM); };
 
   const handleEdit = async (id: string) => {
@@ -120,13 +148,10 @@ export default function AdminAgenciesPage() {
         logoUrl: editForm.logoUrl || undefined,
       });
       setAgencies(list => list.map(x => x.id === id ? { ...x, ...res.data.data.agency } : x));
-      cancelEdit();
-      toast.success('Agency updated');
+      cancelEdit(); toast.success('Agency updated');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to update agency');
-    } finally {
-      setEditSaving(false);
-    }
+    } finally { setEditSaving(false); }
   };
 
   const handleToggle = async (id: string, current: boolean) => {
@@ -134,161 +159,287 @@ export default function AdminAgenciesPage() {
       await adminApi.toggleAgencyStatus(id, !current);
       setAgencies(list => list.map(x => x.id === id ? { ...x, is_active: !current } : x));
       toast.success(`Agency ${!current ? 'activated' : 'deactivated'}`);
-    } catch {
-      toast.error('Failed to update agency status');
-    }
+    } catch { toast.error('Failed to update agency status'); }
+  };
+
+  // ── Application actions ─────────────────────────────────────────────────────
+  const handleApprove = async (id: string) => {
+    if (!confirm('Approve this application? An agency account will be created and credentials sent by SMS.')) return;
+    setActioning(id);
+    try {
+      await adminApi.approveApplication(id);
+      setApps(list => list.map(a => a.id === id ? { ...a, status: 'approved' } : a));
+      toast.success('Application approved — agency account created');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to approve');
+    } finally { setActioning(null); }
+  };
+
+  const handleReject = async (id: string) => {
+    const reason = prompt('Rejection reason (optional):') ?? undefined;
+    if (reason === null) return; // user pressed Cancel
+    setActioning(id);
+    try {
+      await adminApi.rejectApplication(id, reason || undefined);
+      setApps(list => list.map(a => a.id === id ? { ...a, status: 'rejected' } : a));
+      toast.success('Application rejected');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to reject');
+    } finally { setActioning(null); }
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Agencies</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{total} total</span>
-          <button type="button" onClick={() => setShowForm(v => !v)} className="btn-admin-primary">
-            {showForm ? 'Cancel' : '+ New Agency'}
+        {tab === 'agencies' && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">{total} total</span>
+            <button type="button" onClick={() => setShowForm(v => !v)} className="btn-admin-primary">
+              {showForm ? 'Cancel' : '+ New Agency'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6 w-fit">
+        {(['agencies', 'applications'] as Tab[]).map(t => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
+              tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t}
           </button>
-        </div>
+        ))}
       </div>
 
-      {/* Create form */}
-      {showForm && (
-        <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 shadow-card">
-          <h2 className="font-semibold text-gray-800 mb-4">New Agency</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label-admin">Name *</label>
-              <input className="input-admin" placeholder="e.g. Virunga Express" value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label-admin">Registration No.</label>
-              <input className="input-admin" placeholder="RW-AGN-001" value={form.registrationNo}
-                onChange={e => setForm(f => ({ ...f, registrationNo: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label-admin">Contact Phone</label>
-              <input className="input-admin" placeholder="+250788000000" value={form.contactPhone}
-                onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label-admin">Contact Email</label>
-              <input className="input-admin" type="email" placeholder="info@agency.rw" value={form.contactEmail}
-                onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="label-admin">Address</label>
-              <input className="input-admin" placeholder="KG 123 St, Kigali" value={form.address}
-                onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-4">
-            <button type="button" onClick={handleCreate} disabled={saving} className="btn-admin-primary flex items-center gap-2">
-              {saving && <Spinner size="sm" />} Create Agency
-            </button>
-            <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }} className="btn-admin-secondary">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-4">
-        <input className="input-admin max-w-xs" placeholder="Search by name, reg. no. or email…"
-          value={search} onChange={handleSearch} />
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-20 gap-3 text-gray-400"><Spinner /><span>Loading...</span></div>
-      ) : agencies.length === 0 ? (
-        <EmptyState title="No agencies found" />
-      ) : (
+      {/* ── Agencies tab ── */}
+      {tab === 'agencies' && (
         <>
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    {['Name', 'Reg. No.', 'Phone', 'Email', 'Buses', 'Status', ''].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {agencies.map(a => (
-                    editingId === a.id ? (
-                      /* ── Inline edit ── */
-                      <tr key={a.id} className="bg-blue-50">
-                        <td className="px-4 py-2">
-                          <input className="input-admin py-1 text-sm" placeholder="Name" value={editForm.name}
-                            onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input className="input-admin py-1 text-sm" placeholder="Reg. No." value={editForm.registrationNo}
-                            onChange={e => setEditForm(f => ({ ...f, registrationNo: e.target.value }))} />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input className="input-admin py-1 text-sm" placeholder="Phone" value={editForm.contactPhone}
-                            onChange={e => setEditForm(f => ({ ...f, contactPhone: e.target.value }))} />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input className="input-admin py-1 text-sm" type="email" placeholder="Email" value={editForm.contactEmail}
-                            onChange={e => setEditForm(f => ({ ...f, contactEmail: e.target.value }))} />
-                        </td>
-                        <td className="px-4 py-2 text-gray-500">{a.total_buses}</td>
-                        <td />
-                        <td className="px-4 py-2 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2">
-                            <button type="button" onClick={() => handleEdit(a.id)} disabled={editSaving}
-                              className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg flex items-center gap-1">
-                              {editSaving && <Spinner size="sm" />} Save
-                            </button>
-                            <button type="button" onClick={cancelEdit}
-                              className="text-xs font-medium text-gray-500 hover:text-gray-700">Cancel</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      /* ── Normal row ── */
-                      <tr key={a.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{a.name}</td>
-                        <td className="px-4 py-3 text-gray-500">{a.registration_no ?? '—'}</td>
-                        <td className="px-4 py-3 font-mono text-gray-600">{a.contact_phone ?? '—'}</td>
-                        <td className="px-4 py-3 text-gray-500">{a.contact_email ?? '—'}</td>
-                        <td className="px-4 py-3 text-gray-700">{a.total_buses}</td>
-                        <td className="px-4 py-3">
-                          <Badge label={a.is_active ? 'active' : 'inactive'} status={a.is_active ? 'confirmed' : 'cancelled'} />
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-3">
-                            <button type="button" onClick={() => openEdit(a)}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                            <button type="button" onClick={() => handleToggle(a.id, a.is_active)}
-                              className={`text-xs font-medium ${a.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
-                              {a.is_active ? 'Deactivate' : 'Activate'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {total > LIMIT && (
-            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-              <span>Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}</span>
-              <div className="flex gap-2">
-                <button type="button" disabled={page === 1}
-                  onClick={() => { const p = page - 1; setPage(p); load(p); }}
-                  className="btn-admin-secondary">Prev</button>
-                <button type="button" disabled={page * LIMIT >= total}
-                  onClick={() => { const p = page + 1; setPage(p); load(p); }}
-                  className="btn-admin-secondary">Next</button>
+          {showForm && (
+            <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 shadow-card">
+              <h2 className="font-semibold text-gray-800 mb-4">New Agency</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label-admin">Name *</label>
+                  <input className="input-admin" placeholder="e.g. Virunga Express" value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label-admin">Registration No.</label>
+                  <input className="input-admin" placeholder="RW-AGN-001" value={form.registrationNo}
+                    onChange={e => setForm(f => ({ ...f, registrationNo: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label-admin">Contact Phone</label>
+                  <input className="input-admin" placeholder="+250788000000" value={form.contactPhone}
+                    onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label-admin">Contact Email</label>
+                  <input className="input-admin" type="email" placeholder="info@agency.rw" value={form.contactEmail}
+                    onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="label-admin">Address</label>
+                  <input className="input-admin" placeholder="KG 123 St, Kigali" value={form.address}
+                    onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button type="button" onClick={handleCreate} disabled={saving} className="btn-admin-primary flex items-center gap-2">
+                  {saving && <Spinner size="sm" />} Create Agency
+                </button>
+                <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }} className="btn-admin-secondary">Cancel</button>
               </div>
             </div>
+          )}
+
+          <div className="mb-4">
+            <input className="input-admin max-w-xs" placeholder="Search by name, reg. no. or email…"
+              value={search} onChange={handleSearch} />
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20 gap-3 text-gray-400"><Spinner /><span>Loading...</span></div>
+          ) : agencies.length === 0 ? (
+            <EmptyState title="No agencies found" />
+          ) : (
+            <>
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        {['Name', 'Reg. No.', 'Phone', 'Email', 'Buses', 'Status', ''].map(h => (
+                          <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {agencies.map(a => (
+                        editingId === a.id ? (
+                          <tr key={a.id} className="bg-blue-50">
+                            <td className="px-4 py-2"><input className="input-admin py-1 text-sm" placeholder="Name" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></td>
+                            <td className="px-4 py-2"><input className="input-admin py-1 text-sm" placeholder="Reg. No." value={editForm.registrationNo} onChange={e => setEditForm(f => ({ ...f, registrationNo: e.target.value }))} /></td>
+                            <td className="px-4 py-2"><input className="input-admin py-1 text-sm" placeholder="Phone" value={editForm.contactPhone} onChange={e => setEditForm(f => ({ ...f, contactPhone: e.target.value }))} /></td>
+                            <td className="px-4 py-2"><input className="input-admin py-1 text-sm" type="email" placeholder="Email" value={editForm.contactEmail} onChange={e => setEditForm(f => ({ ...f, contactEmail: e.target.value }))} /></td>
+                            <td className="px-4 py-2 text-gray-500">{a.total_buses}</td>
+                            <td />
+                            <td className="px-4 py-2 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2">
+                                <button type="button" onClick={() => handleEdit(a.id)} disabled={editSaving}
+                                  className="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg flex items-center gap-1">
+                                  {editSaving && <Spinner size="sm" />} Save
+                                </button>
+                                <button type="button" onClick={cancelEdit} className="text-xs font-medium text-gray-500 hover:text-gray-700">Cancel</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr key={a.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{a.name}</td>
+                            <td className="px-4 py-3 text-gray-500">{a.registration_no ?? '—'}</td>
+                            <td className="px-4 py-3 font-mono text-gray-600">{a.contact_phone ?? '—'}</td>
+                            <td className="px-4 py-3 text-gray-500">{a.contact_email ?? '—'}</td>
+                            <td className="px-4 py-3 text-gray-700">{a.total_buses}</td>
+                            <td className="px-4 py-3"><Badge label={a.is_active ? 'active' : 'inactive'} status={a.is_active ? 'confirmed' : 'cancelled'} /></td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-3">
+                                <button type="button" onClick={() => openEdit(a)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                <button type="button" onClick={() => handleToggle(a.id, a.is_active)}
+                                  className={`text-xs font-medium ${a.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'}`}>
+                                  {a.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {total > LIMIT && (
+                <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+                  <span>Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}</span>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={page === 1}
+                      onClick={() => { const p = page - 1; setPage(p); load(p); }}
+                      className="btn-admin-secondary">Prev</button>
+                    <button type="button" disabled={page * LIMIT >= total}
+                      onClick={() => { const p = page + 1; setPage(p); load(p); }}
+                      className="btn-admin-secondary">Next</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── Applications tab ── */}
+      {tab === 'applications' && (
+        <>
+          <div className="flex flex-wrap gap-3 items-center mb-4">
+            <div>
+              <label className="label-admin">Status</label>
+              <select className="input-admin w-36" title="Filter by status" value={appsStatus}
+                onChange={e => { setAppsStatus(e.target.value); setAppsPage(1); loadApps(1, e.target.value); }}>
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <span className="text-sm text-gray-500 self-end pb-0.5">{appsTotal} total</span>
+          </div>
+
+          {appsLoading ? (
+            <div className="flex items-center justify-center py-20 gap-3 text-gray-400"><Spinner /><span>Loading...</span></div>
+          ) : apps.length === 0 ? (
+            <EmptyState title="No applications found" />
+          ) : (
+            <>
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        {['Company', 'Contact', 'Phone', 'Email', 'Fleet', 'Submitted', 'Status', ''].map(h => (
+                          <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {apps.map(a => (
+                        <tr key={a.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{a.company_name}</td>
+                          <td className="px-4 py-3 text-gray-700">{a.contact_name}</td>
+                          <td className="px-4 py-3 font-mono text-gray-600">{a.contact_phone}</td>
+                          <td className="px-4 py-3 text-gray-500">{a.contact_email}</td>
+                          <td className="px-4 py-3 text-gray-600">{a.fleet_size ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                            {new Date(a.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              label={a.status}
+                              status={a.status === 'approved' ? 'confirmed' : a.status === 'rejected' ? 'cancelled' : 'pending'}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            {a.status === 'pending' && (
+                              <div className="flex items-center justify-end gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleApprove(a.id)}
+                                  disabled={actioning === a.id}
+                                  className="text-xs font-semibold text-green-700 hover:text-green-900 disabled:opacity-50"
+                                >
+                                  {actioning === a.id ? '…' : 'Approve'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReject(a.id)}
+                                  disabled={actioning === a.id}
+                                  className="text-xs font-medium text-red-500 hover:text-red-700 disabled:opacity-50"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {a.status === 'rejected' && a.rejection_reason && (
+                              <span className="text-xs text-gray-400 italic">{a.rejection_reason}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {appsTotal > LIMIT && (
+                <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+                  <span>Showing {(appsPage - 1) * LIMIT + 1}–{Math.min(appsPage * LIMIT, appsTotal)} of {appsTotal}</span>
+                  <div className="flex gap-2">
+                    <button type="button" disabled={appsPage === 1}
+                      onClick={() => { const p = appsPage - 1; setAppsPage(p); loadApps(p); }}
+                      className="btn-admin-secondary">Prev</button>
+                    <button type="button" disabled={appsPage * LIMIT >= appsTotal}
+                      onClick={() => { const p = appsPage + 1; setAppsPage(p); loadApps(p); }}
+                      className="btn-admin-secondary">Next</button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

@@ -1,11 +1,15 @@
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../../config/database');
 
-const getAllSchedules = async ({ page = 1, limit = 20, routeId, date, status } = {}) => {
+const getAllSchedules = async ({ page = 1, limit = 20, routeId, date, status, agencyId } = {}) => {
   const offset = (page - 1) * limit;
   const params = [];
   let where = 'WHERE 1=1';
 
+  if (agencyId) {
+    params.push(agencyId);
+    where += ` AND b.agency_id = $${params.length}`;
+  }
   if (routeId) {
     params.push(routeId);
     where += ` AND s.route_id = $${params.length}`;
@@ -64,7 +68,11 @@ const getScheduleById = async (id) => {
   return result.rows[0];
 };
 
-const createSchedule = async ({ busId, routeId, departureTime, arrivalTime, basePrice, totalSeats }) => {
+const createSchedule = async ({ busId, routeId, departureTime, arrivalTime, basePrice, totalSeats, agencyId }) => {
+  if (agencyId) {
+    const owns = await query('SELECT id FROM buses WHERE id = $1 AND agency_id = $2 AND is_active = true', [busId, agencyId]);
+    if (!owns.rows.length) { const err = new Error('Bus not found or access denied'); err.statusCode = 403; throw err; }
+  }
   // Check no duplicate schedule for same bus and time
   const conflict = await query(
     `SELECT id FROM schedules
@@ -94,7 +102,14 @@ const createSchedule = async ({ busId, routeId, departureTime, arrivalTime, base
   return result.rows[0];
 };
 
-const updateSchedule = async (id, data) => {
+const updateSchedule = async (id, data, agencyId = null) => {
+  if (agencyId) {
+    const owns = await query(
+      'SELECT s.id FROM schedules s JOIN buses b ON b.id = s.bus_id WHERE s.id = $1 AND b.agency_id = $2',
+      [id, agencyId]
+    );
+    if (!owns.rows.length) { const err = new Error('Schedule not found or access denied'); err.statusCode = 403; throw err; }
+  }
   const fieldMap = {
     departureTime: 'departure_time',
     arrivalTime: 'arrival_time',
@@ -131,7 +146,14 @@ const updateSchedule = async (id, data) => {
   return result.rows[0];
 };
 
-const cancelSchedule = async (id) => {
+const cancelSchedule = async (id, agencyId = null) => {
+  if (agencyId) {
+    const owns = await query(
+      'SELECT s.id FROM schedules s JOIN buses b ON b.id = s.bus_id WHERE s.id = $1 AND b.agency_id = $2',
+      [id, agencyId]
+    );
+    if (!owns.rows.length) { const err = new Error('Schedule not found or access denied'); err.statusCode = 403; throw err; }
+  }
   const result = await query(
     `UPDATE schedules SET status = 'cancelled', updated_at = NOW() WHERE id = $1 RETURNING id`,
     [id]

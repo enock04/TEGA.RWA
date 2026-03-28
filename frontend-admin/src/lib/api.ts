@@ -127,6 +127,7 @@ export const paymentsApi = {
   confirm: (paymentId: string) => api.post(`/payments/${paymentId}/confirm`),
   getByBooking: (bookingId: string) => api.get(`/payments/booking/${bookingId}`),
   getAll: (params?: object) => api.get('/payments', { params }),
+  refund: (bookingId: string) => api.post(`/payments/booking/${bookingId}/refund`),
 };
 
 export const ticketsApi = {
@@ -136,11 +137,21 @@ export const ticketsApi = {
 export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),
   getReports: (params?: object) => api.get('/admin/reports', { params }),
+  exportCSVUrl: (params?: { from?: string; to?: string }) => {
+    const qs = params && Object.values(params).some(Boolean)
+      ? `?${new URLSearchParams(params as Record<string, string>).toString()}`
+      : '';
+    return `${API_URL}/admin/reports/export${qs}`;
+  },
   getAgencies: (params?: object) => api.get('/admin/agencies', { params }),
   getAgency: (id: string) => api.get(`/admin/agencies/${id}`),
   createAgency: (data: object) => api.post('/admin/agencies', data),
   updateAgency: (id: string, data: object) => api.put(`/admin/agencies/${id}`, data),
   toggleAgencyStatus: (id: string, isActive: boolean) => api.patch(`/admin/agencies/${id}/status`, { isActive }),
+  getApplications: (params?: { page?: number; limit?: number; status?: string }) =>
+    api.get('/agencies/applications', { params }),
+  approveApplication: (id: string) => api.post(`/agencies/applications/${id}/approve`),
+  rejectApplication: (id: string, reason?: string) => api.post(`/agencies/applications/${id}/reject`, { reason }),
 };
 
 export const usersApi = {

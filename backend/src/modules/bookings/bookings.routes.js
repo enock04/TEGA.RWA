@@ -1,10 +1,19 @@
 const express = require('express');
 const { body } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const controller = require('./bookings.controller');
 const { validate } = require('../../middleware/validate');
 const { authenticate, authorize } = require('../../middleware/auth');
 
 const router = express.Router();
+
+// POST-only transaction limiter — does not affect GET /my or GET /admin
+const isDev = process.env.NODE_ENV !== 'production';
+const transactionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: isDev ? 60 : 30,
+  message: { success: false, message: 'Too many booking requests, please try again later.' },
+});
 
 /**
  * @swagger
@@ -34,6 +43,7 @@ const router = express.Router();
  *                 type: string
  */
 router.post('/',
+  transactionLimiter,
   authenticate,
   [
     body('scheduleId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid schedule ID'),
@@ -54,6 +64,7 @@ router.post('/',
  *     tags: [Bookings]
  */
 router.post('/batch',
+  transactionLimiter,
   authenticate,
   [
     body('scheduleId').matches(/^[0-9a-f-]{36}$/i).withMessage('Invalid schedule ID'),

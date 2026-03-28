@@ -239,6 +239,12 @@ export default function HomePage() {
           <p className="text-center text-gray-600 text-xs pt-1">
             {t('home.bookSeat')} &bull; {t('home.payMomo')} &bull; {t('home.getTicket')}
           </p>
+          <p className="text-center text-gray-600 text-xs pt-2">
+            Bus company?{' '}
+            <Link href="/apply" className="text-gray-400 underline underline-offset-2">
+              Partner with us
+            </Link>
+          </p>
         </div>
       </div>
     </MainLayout>

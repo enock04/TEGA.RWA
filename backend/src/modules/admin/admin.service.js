@@ -205,4 +205,64 @@ const toggleAgencyStatus = async (id, isActive) => {
   return result.rows[0];
 };
 
-module.exports = { getDashboard, getReports, getAgencies, getAgencyById, createAgency, updateAgency, toggleAgencyStatus };
+// ─── CSV Export ───────────────────────────────────────────────────────────────
+
+const exportBookingsCSV = async ({ from, to, agencyId } = {}) => {
+  const params = [];
+  let where = 'WHERE 1=1';
+
+  if (agencyId) { params.push(agencyId); where += ` AND b.agency_id = $${params.length}`; }
+  if (from)     { params.push(from);     where += ` AND DATE(bk.created_at) >= $${params.length}`; }
+  if (to)       { params.push(to);       where += ` AND DATE(bk.created_at) <= $${params.length}`; }
+
+  const result = await query(
+    `SELECT bk.id,
+            bk.status,
+            bk.amount,
+            bk.passenger_name,
+            bk.passenger_phone,
+            bk.passenger_email,
+            s.seat_number,
+            r.name AS route_name,
+            dep.name AS from_station,
+            arr.name AS to_station,
+            sc.departure_time,
+            b.name AS bus_name,
+            b.plate_number,
+            a.name AS agency_name,
+            bk.created_at,
+            bk.refund_status
+     FROM bookings bk
+     JOIN seats s ON s.id = bk.seat_id
+     JOIN schedules sc ON sc.id = bk.schedule_id
+     JOIN buses b ON b.id = sc.bus_id
+     LEFT JOIN agencies a ON a.id = b.agency_id
+     JOIN routes r ON r.id = sc.route_id
+     JOIN stations dep ON dep.id = r.departure_station_id
+     JOIN stations arr ON arr.id = r.arrival_station_id
+     ${where}
+     ORDER BY bk.created_at DESC`,
+    params
+  );
+
+  return result.rows;
+};
+
+const toCSV = (rows) => {
+  if (!rows.length) return '';
+  const escape = (v) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const headers = Object.keys(rows[0]);
+  const lines = [headers.join(',')];
+  for (const row of rows) {
+    lines.push(headers.map(h => escape(row[h])).join(','));
+  }
+  return lines.join('\r\n');
+};
+
+module.exports = {
+  getDashboard, getReports, getAgencies, getAgencyById, createAgency, updateAgency, toggleAgencyStatus,
+  exportBookingsCSV, toCSV,
+};

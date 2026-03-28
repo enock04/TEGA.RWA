@@ -209,11 +209,15 @@ const cancelBooking = async (bookingId, userId) => {
   }
 };
 
-const getAllBookings = async ({ page = 1, limit = 20, status, scheduleId, date } = {}) => {
+const getAllBookings = async ({ page = 1, limit = 20, status, scheduleId, date, agencyId } = {}) => {
   const offset = (page - 1) * limit;
   const params = [];
   let where = 'WHERE 1=1';
 
+  if (agencyId) {
+    params.push(agencyId);
+    where += ` AND b.agency_id = $${params.length}`;
+  }
   if (status) {
     params.push(status);
     where += ` AND bk.status = $${params.length}`;

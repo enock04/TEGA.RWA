@@ -318,10 +318,101 @@ const getAllPayments = async ({ page = 1, limit = 20, status, method, date } = {
   return { payments: result.rows, total: parseInt(count.rows[0].count), page, limit };
 };
 
+// ─────────────────────────────────────────────
+// Refund payment (mock — calls real API in production)
+// ─────────────────────────────────────────────
+
+const refundPayment = async ({ bookingId, userId, isAdmin = false }) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // Load booking + payment together, lock both
+    const bookingResult = await client.query(
+      `SELECT bk.id, bk.status, bk.user_id, bk.schedule_id, bk.refund_status,
+              p.id AS payment_id, p.status AS payment_status, p.amount, p.method, p.provider_reference
+       FROM bookings bk
+       JOIN payments p ON p.booking_id = bk.id AND p.status = 'completed'
+       WHERE bk.id = $1
+       FOR UPDATE`,
+      [bookingId]
+    );
+
+    if (!bookingResult.rows.length) {
+      const err = new Error('No completed payment found for this booking');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const row = bookingResult.rows[0];
+
+    if (!isAdmin && row.user_id !== userId) {
+      const err = new Error('Unauthorized');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    if (!['confirmed'].includes(row.status)) {
+      const err = new Error(`Cannot refund a ${row.status} booking`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (row.refund_status === 'completed') {
+      const err = new Error('Booking has already been refunded');
+      err.statusCode = 409;
+      throw err;
+    }
+
+    // ── Mock refund (replace with real provider call in production) ──
+    logger.info(`[Refund MOCK] Refunding ${row.amount} RWF via ${row.method} for booking ${bookingId}`);
+    await new Promise(r => setTimeout(r, 200));
+    // In production: call MTN reversal or Airtel refund endpoint here
+
+    // Mark payment as refunded
+    await client.query(
+      `UPDATE payments SET status = 'refunded', refunded_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [row.payment_id]
+    );
+
+    // Cancel booking + mark refund complete
+    await client.query(
+      `UPDATE bookings
+       SET status = 'cancelled', refund_status = 'completed',
+           cancelled_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [bookingId]
+    );
+
+    // Restore seat availability
+    await client.query(
+      'UPDATE schedules SET available_seats = available_seats + 1 WHERE id = $1',
+      [row.schedule_id]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      bookingId,
+      paymentId: row.payment_id,
+      amount: row.amount,
+      method: row.method,
+      refundStatus: 'completed',
+      message: 'Refund processed successfully. Funds will be returned within 3–5 business days.',
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   initiatePayment,
   confirmPayment,
   handleWebhook,
   getPaymentByBooking,
   getAllPayments,
+  refundPayment,
 };

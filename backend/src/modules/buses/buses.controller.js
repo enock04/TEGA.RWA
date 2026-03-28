@@ -4,7 +4,8 @@ const { success, created } = require('../../utils/response');
 const getAll = async (req, res, next) => {
   try {
     const { page, limit, busType, search } = req.query;
-    const result = await busesService.getAllBuses({ page: parseInt(page) || 1, limit: parseInt(limit) || 20, busType, search });
+    const agencyId = req.user?.role === 'agency' ? req.user.agency_id : null;
+    const result = await busesService.getAllBuses({ page: parseInt(page) || 1, limit: parseInt(limit) || 20, busType, search, agencyId });
     return success(res, result);
   } catch (err) {
     next(err);
@@ -32,7 +33,8 @@ const getSeats = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const bus = await busesService.createBus(req.body);
+    const _enforcedAgencyId = req.user?.role === 'agency' ? req.user.agency_id : null;
+    const bus = await busesService.createBus({ ...req.body, _enforcedAgencyId });
     return created(res, { bus }, 'Bus created');
   } catch (err) {
     next(err);
@@ -41,7 +43,8 @@ const create = async (req, res, next) => {
 
 const update = async (req, res, next) => {
   try {
-    const bus = await busesService.updateBus(req.params.id, req.body);
+    const agencyId = req.user?.role === 'agency' ? req.user.agency_id : null;
+    const bus = await busesService.updateBus(req.params.id, req.body, agencyId);
     return success(res, { bus }, 'Bus updated');
   } catch (err) {
     next(err);
@@ -50,7 +53,8 @@ const update = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
   try {
-    await busesService.deleteBus(req.params.id);
+    const agencyId = req.user?.role === 'agency' ? req.user.agency_id : null;
+    await busesService.deleteBus(req.params.id, agencyId);
     return success(res, null, 'Bus deleted');
   } catch (err) {
     next(err);

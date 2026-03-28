@@ -1,11 +1,15 @@
 const { v4: uuidv4 } = require('uuid');
 const { query, getClient } = require('../../config/database');
 
-const getAllBuses = async ({ page = 1, limit = 20, busType, search } = {}) => {
+const getAllBuses = async ({ page = 1, limit = 20, busType, search, agencyId } = {}) => {
   const offset = (page - 1) * limit;
   const params = [];
   let where = 'WHERE b.is_active = true';
 
+  if (agencyId) {
+    params.push(agencyId);
+    where += ` AND b.agency_id = $${params.length}`;
+  }
   if (busType) {
     params.push(busType);
     where += ` AND b.bus_type = $${params.length}`;
@@ -58,7 +62,9 @@ const getBusSeats = async (busId, scheduleId) => {
   return result.rows;
 };
 
-const createBus = async ({ name, plateNumber, busType, totalSeats, agencyId, amenities, seatLayout }) => {
+const createBus = async ({ name, plateNumber, busType, totalSeats, agencyId, amenities, seatLayout, _enforcedAgencyId }) => {
+  // Agency staff can only create buses for their own agency
+  const resolvedAgencyId = _enforcedAgencyId || agencyId || null;
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -67,7 +73,7 @@ const createBus = async ({ name, plateNumber, busType, totalSeats, agencyId, ame
     await client.query(
       `INSERT INTO buses (id, name, plate_number, bus_type, total_seats, agency_id, amenities)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [busId, name, plateNumber, busType || 'standard', totalSeats, agencyId || null, JSON.stringify(amenities || [])]
+      [busId, name, plateNumber, busType || 'standard', totalSeats, resolvedAgencyId, JSON.stringify(amenities || [])]
     );
 
     // Generate seats
@@ -94,7 +100,11 @@ const createBus = async ({ name, plateNumber, busType, totalSeats, agencyId, ame
   }
 };
 
-const updateBus = async (id, data) => {
+const updateBus = async (id, data, agencyId = null) => {
+  if (agencyId) {
+    const ownership = await query('SELECT id FROM buses WHERE id = $1 AND agency_id = $2 AND is_active = true', [id, agencyId]);
+    if (!ownership.rows.length) { const err = new Error('Bus not found or access denied'); err.statusCode = 403; throw err; }
+  }
   const fieldMap = {
     name: 'name',
     plateNumber: 'plate_number',
@@ -132,7 +142,11 @@ const updateBus = async (id, data) => {
   return result.rows[0];
 };
 
-const deleteBus = async (id) => {
+const deleteBus = async (id, agencyId = null) => {
+  if (agencyId) {
+    const ownership = await query('SELECT id FROM buses WHERE id = $1 AND agency_id = $2 AND is_active = true', [id, agencyId]);
+    if (!ownership.rows.length) { const err = new Error('Bus not found or access denied'); err.statusCode = 403; throw err; }
+  }
   await query('UPDATE buses SET is_active = false WHERE id = $1', [id]);
 };
 
