@@ -3,87 +3,110 @@ const { query, getClient } = require('../../config/database');
 
 const BOOKING_EXPIRY_MINUTES = 15;
 
-const createBooking = async ({ userId, scheduleId, seatId, passengerName, passengerPhone, passengerEmail }) => {
-  const client = await getClient();
-  try {
-    await client.query('BEGIN');
-
-    // Lock and check schedule availability
-    const schedResult = await client.query(
-      'SELECT id, available_seats, base_price, status FROM schedules WHERE id = $1 FOR UPDATE',
-      [scheduleId]
-    );
-    if (!schedResult.rows.length) {
-      const err = new Error('Schedule not found');
-      err.statusCode = 404;
+// Wrap a transaction with automatic retry on deadlock or serialization failure
+const withRetry = async (fn, maxRetries = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const retryable = err.code === '40P01' || err.code === '40001'; // deadlock / serialization failure
+      if (retryable && attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 50 * attempt)); // brief back-off
+        continue;
+      }
       throw err;
     }
-    const schedule = schedResult.rows[0];
-    if (schedule.status !== 'active') {
-      const err = new Error('Schedule is not active');
-      err.statusCode = 400;
-      throw err;
-    }
-    if (schedule.available_seats < 1) {
-      const err = new Error('No available seats on this schedule');
-      err.statusCode = 409;
-      throw err;
-    }
-
-    // Check if specific seat is available
-    const seatCheck = await client.query(
-      `SELECT id FROM bookings
-       WHERE schedule_id = $1 AND seat_id = $2 AND status IN ('confirmed', 'pending')`,
-      [scheduleId, seatId]
-    );
-    if (seatCheck.rows.length) {
-      const err = new Error('Seat is already booked. Please select another seat.');
-      err.statusCode = 409;
-      throw err;
-    }
-
-    // Verify seat belongs to this schedule's bus
-    const seatResult = await client.query(
-      `SELECT s.id, s.seat_number, s.seat_class
-       FROM seats s
-       JOIN schedules sc ON sc.bus_id = s.bus_id
-       WHERE s.id = $1 AND sc.id = $2`,
-      [seatId, scheduleId]
-    );
-    if (!seatResult.rows.length) {
-      const err = new Error('Invalid seat for this schedule');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const seat = seatResult.rows[0];
-    const bookingId = uuidv4();
-    const expiresAt = new Date(Date.now() + BOOKING_EXPIRY_MINUTES * 60 * 1000);
-    const amount = parseFloat(schedule.base_price);
-
-    await client.query(
-      `INSERT INTO bookings
-         (id, user_id, schedule_id, seat_id, passenger_name, passenger_phone, passenger_email,
-          amount, status, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)`,
-      [bookingId, userId, scheduleId, seatId, passengerName, passengerPhone,
-       passengerEmail || null, amount, expiresAt]
-    );
-
-    // Decrement available seats
-    await client.query(
-      'UPDATE schedules SET available_seats = available_seats - 1 WHERE id = $1',
-      [scheduleId]
-    );
-
-    await client.query('COMMIT');
-    return getBookingById(bookingId);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
   }
+};
+
+const createBooking = async ({ userId, scheduleId, seatId, passengerName, passengerPhone, passengerEmail, specialAssistance = false }) => {
+  return withRetry(async () => {
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      // ── 1. Quick read — no lock needed yet ──────────────────────────────────
+      const schedResult = await client.query(
+        'SELECT id, available_seats, base_price, status FROM schedules WHERE id = $1',
+        [scheduleId]
+      );
+      if (!schedResult.rows.length) {
+        const err = new Error('Schedule not found'); err.statusCode = 404; throw err;
+      }
+      const schedule = schedResult.rows[0];
+      if (schedule.status !== 'active') {
+        const err = new Error('Schedule is not active'); err.statusCode = 400; throw err;
+      }
+      if (schedule.available_seats < 1) {
+        const err = new Error('No available seats on this schedule'); err.statusCode = 409; throw err;
+      }
+
+      // ── 2. Lock ONLY the specific seat row (not the whole schedule) ─────────
+      //    Concurrent bookings for DIFFERENT seats do not block each other.
+      const seatLock = await client.query(
+        `SELECT s.id, s.seat_number, s.seat_class
+         FROM seats s
+         JOIN schedules sc ON sc.bus_id = s.bus_id
+         WHERE s.id = $1 AND sc.id = $2
+         FOR UPDATE OF s`,
+        [seatId, scheduleId]
+      );
+      if (!seatLock.rows.length) {
+        const err = new Error('Invalid seat for this schedule'); err.statusCode = 400; throw err;
+      }
+
+      // ── 3. Check the seat is still free (under the seat-level lock) ─────────
+      const seatCheck = await client.query(
+        `SELECT id FROM bookings
+         WHERE schedule_id = $1 AND seat_id = $2 AND status IN ('confirmed', 'pending')`,
+        [scheduleId, seatId]
+      );
+      if (seatCheck.rows.length) {
+        const err = new Error('Seat is already booked. Please select another seat.'); err.statusCode = 409; throw err;
+      }
+
+      // ── 4. Atomically decrement available_seats (only if > 0) ───────────────
+      //    This UPDATE acquires a brief row-level lock on the schedule, much
+      //    shorter than holding it for the full transaction duration.
+      const seatsUpdate = await client.query(
+        `UPDATE schedules SET available_seats = available_seats - 1
+         WHERE id = $1 AND available_seats > 0
+         RETURNING id`,
+        [scheduleId]
+      );
+      if (!seatsUpdate.rows.length) {
+        const err = new Error('No available seats on this schedule'); err.statusCode = 409; throw err;
+      }
+
+      // ── 5. Insert the booking ────────────────────────────────────────────────
+      const bookingId = uuidv4();
+      const expiresAt = new Date(Date.now() + BOOKING_EXPIRY_MINUTES * 60 * 1000);
+      const amount = parseFloat(schedule.base_price);
+
+      await client.query(
+        `INSERT INTO bookings
+           (id, user_id, schedule_id, seat_id, passenger_name, passenger_phone, passenger_email,
+            special_assistance, amount, status, expires_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10)`,
+        [bookingId, userId, scheduleId, seatId, passengerName, passengerPhone,
+         passengerEmail || null, specialAssistance, amount, expiresAt]
+      );
+
+      await client.query('COMMIT');
+      return getBookingById(bookingId);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      // Map DB constraint violations to friendly errors
+      if (err.code === '23505') { // unique_violation — seat taken by concurrent insert
+        const e = new Error('Seat is already booked. Please select another seat.');
+        e.statusCode = 409;
+        throw e;
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  });
 };
 
 const getBookingById = async (id) => {
@@ -246,7 +269,7 @@ const getAllBookings = async ({ page = 1, limit = 20, status, scheduleId, date, 
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
-  const count = await query(`SELECT COUNT(*) FROM bookings bk JOIN schedules sc ON sc.id = bk.schedule_id ${where}`, params.slice(0, -2));
+  const count = await query(`SELECT COUNT(*) FROM bookings bk JOIN schedules sc ON sc.id = bk.schedule_id JOIN buses b ON b.id = sc.bus_id JOIN routes r ON r.id = sc.route_id ${where}`, params.slice(0, -2));
   return { bookings: result.rows, total: parseInt(count.rows[0].count), page, limit };
 };
 
@@ -278,68 +301,99 @@ const expirePendingBookings = async () => {
 };
 
 const createBatchBookings = async ({ userId, scheduleId, passengers }) => {
-  const client = await getClient();
-  try {
-    await client.query('BEGIN');
+  return withRetry(async () => {
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
 
-    const schedResult = await client.query(
-      'SELECT id, available_seats, base_price, status FROM schedules WHERE id = $1 FOR UPDATE',
-      [scheduleId]
-    );
-    if (!schedResult.rows.length) {
-      const err = new Error('Schedule not found'); err.statusCode = 404; throw err;
-    }
-    const schedule = schedResult.rows[0];
-    if (schedule.status !== 'active') {
-      const err = new Error('Schedule is not active'); err.statusCode = 400; throw err;
-    }
-    if (schedule.available_seats < passengers.length) {
-      const err = new Error('Not enough available seats'); err.statusCode = 409; throw err;
-    }
-
-    const bookingIds = [];
-    const expiresAt = new Date(Date.now() + BOOKING_EXPIRY_MINUTES * 60 * 1000);
-    const amount = parseFloat(schedule.base_price);
-
-    for (const p of passengers) {
-      const seatCheck = await client.query(
-        `SELECT id FROM bookings WHERE schedule_id = $1 AND seat_id = $2 AND status IN ('confirmed','pending')`,
-        [scheduleId, p.seatId]
+      // ── 1. Quick read — validate schedule ───────────────────────────────────
+      const schedResult = await client.query(
+        'SELECT id, available_seats, base_price, status FROM schedules WHERE id = $1',
+        [scheduleId]
       );
-      if (seatCheck.rows.length) {
+      if (!schedResult.rows.length) {
+        const err = new Error('Schedule not found'); err.statusCode = 404; throw err;
+      }
+      const schedule = schedResult.rows[0];
+      if (schedule.status !== 'active') {
+        const err = new Error('Schedule is not active'); err.statusCode = 400; throw err;
+      }
+      if (schedule.available_seats < passengers.length) {
+        const err = new Error('Not enough available seats'); err.statusCode = 409; throw err;
+      }
+
+      // ── 2. Lock seat rows in consistent order (by seat ID) to prevent deadlocks
+      //    when multiple batch requests overlap on some of the same seats.
+      const seatIds = [...new Set(passengers.map(p => p.seatId))].sort();
+      if (seatIds.length !== passengers.length) {
+        const err = new Error('Duplicate seats in batch request'); err.statusCode = 400; throw err;
+      }
+
+      const seatPlaceholders = seatIds.map((_, i) => `$${i + 2}`).join(', ');
+      const lockedSeats = await client.query(
+        `SELECT s.id FROM seats s
+         JOIN schedules sc ON sc.bus_id = s.bus_id
+         WHERE sc.id = $1 AND s.id IN (${seatPlaceholders})
+         ORDER BY s.id
+         FOR UPDATE OF s`,
+        [scheduleId, ...seatIds]
+      );
+      if (lockedSeats.rows.length !== seatIds.length) {
+        const err = new Error('One or more seats are invalid for this schedule'); err.statusCode = 400; throw err;
+      }
+
+      // ── 3. Check all seats are free ─────────────────────────────────────────
+      const takenCheck = await client.query(
+        `SELECT seat_id FROM bookings
+         WHERE schedule_id = $1 AND seat_id = ANY($2::uuid[]) AND status IN ('confirmed','pending')`,
+        [scheduleId, seatIds]
+      );
+      if (takenCheck.rows.length) {
         const err = new Error('One or more selected seats are already booked'); err.statusCode = 409; throw err;
       }
 
-      const seatResult = await client.query(
-        `SELECT s.id FROM seats s JOIN schedules sc ON sc.bus_id = s.bus_id WHERE s.id = $1 AND sc.id = $2`,
-        [p.seatId, scheduleId]
+      // ── 4. Atomically decrement available_seats ──────────────────────────────
+      const seatsUpdate = await client.query(
+        `UPDATE schedules SET available_seats = available_seats - $1
+         WHERE id = $2 AND available_seats >= $1
+         RETURNING id`,
+        [passengers.length, scheduleId]
       );
-      if (!seatResult.rows.length) {
-        const err = new Error('Invalid seat for this schedule'); err.statusCode = 400; throw err;
+      if (!seatsUpdate.rows.length) {
+        const err = new Error('Not enough available seats'); err.statusCode = 409; throw err;
       }
 
-      const bookingId = uuidv4();
-      await client.query(
-        `INSERT INTO bookings (id, user_id, schedule_id, seat_id, passenger_name, passenger_phone, passenger_email, amount, status, expires_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9)`,
-        [bookingId, userId, scheduleId, p.seatId, p.passengerName, p.passengerPhone, p.passengerEmail || null, amount, expiresAt]
-      );
-      bookingIds.push(bookingId);
+      // ── 5. Insert all bookings ───────────────────────────────────────────────
+      const bookingIds = [];
+      const expiresAt = new Date(Date.now() + BOOKING_EXPIRY_MINUTES * 60 * 1000);
+      const amount = parseFloat(schedule.base_price);
+
+      for (const p of passengers) {
+        const bookingId = uuidv4();
+        await client.query(
+          `INSERT INTO bookings (id, user_id, schedule_id, seat_id, passenger_name, passenger_phone,
+            passenger_email, special_assistance, amount, status, expires_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10)`,
+          [bookingId, userId, scheduleId, p.seatId, p.passengerName, p.passengerPhone,
+           p.passengerEmail || null, p.specialAssistance ?? false, amount, expiresAt]
+        );
+        bookingIds.push(bookingId);
+      }
+
+      await client.query('COMMIT');
+      return Promise.all(bookingIds.map(id => getBookingById(id)));
+    } catch (err) {
+      await client.query('ROLLBACK');
+      if (err.code === '23505') {
+        const e = new Error('One or more selected seats are already booked');
+        e.statusCode = 409;
+        throw e;
+      }
+      throw err;
+    } finally {
+      client.release();
     }
-
-    await client.query(
-      'UPDATE schedules SET available_seats = available_seats - $1 WHERE id = $2',
-      [passengers.length, scheduleId]
-    );
-
-    await client.query('COMMIT');
-    return Promise.all(bookingIds.map(id => getBookingById(id)));
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
 };
 
 module.exports = {

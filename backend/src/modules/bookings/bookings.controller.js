@@ -3,7 +3,7 @@ const { success, created } = require('../../utils/response');
 
 const create = async (req, res, next) => {
   try {
-    const { scheduleId, seatId, passengerName, passengerPhone, passengerEmail } = req.body;
+    const { scheduleId, seatId, passengerName, passengerPhone, passengerEmail, specialAssistance } = req.body;
     const booking = await bookingsService.createBooking({
       userId: req.user.id,
       scheduleId,
@@ -11,6 +11,7 @@ const create = async (req, res, next) => {
       passengerName,
       passengerPhone,
       passengerEmail,
+      specialAssistance: !!specialAssistance,
     });
     return created(res, { booking }, 'Booking created. Complete payment within 15 minutes.');
   } catch (err) {

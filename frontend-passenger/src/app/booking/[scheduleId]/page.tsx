@@ -113,6 +113,14 @@ export default function BookingPage() {
         toast.error(`Passenger ${i + 1}: invalid phone number`);
         return;
       }
+      if (!passengers[i].email.trim()) {
+        toast.error(`Passenger ${i + 1}: email is required`);
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(passengers[i].email.trim())) {
+        toast.error(`Passenger ${i + 1}: invalid email address`);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -121,7 +129,8 @@ export default function BookingPage() {
         seatId: selectedSeats[i].id,
         passengerName: p.name.trim(),
         passengerPhone: p.phone.trim(),
-        ...(p.email.trim() ? { passengerEmail: p.email.trim() } : {}),
+        passengerEmail: p.email.trim(),
+        specialAssistance: p.disabled,
       }));
 
       const res = await bookingsApi.createBatch({ scheduleId, passengers: payload });
@@ -298,18 +307,16 @@ export default function BookingPage() {
                   onChange={e => updatePassenger(i, 'phone', e.target.value)}
                 />
               </div>
-              {i === 0 && (
-                <div>
-                  <label className="label">Email <span className="text-gray-500 font-normal">(optional)</span></label>
-                  <input
-                    type="email"
-                    className="input-field"
-                    placeholder="passenger@email.com"
-                    value={passengers[0]?.email ?? ''}
-                    onChange={e => updatePassenger(0, 'email', e.target.value)}
-                  />
-                </div>
-              )}
+              <div>
+                <label className="label">Email</label>
+                <input
+                  type="email"
+                  className="input-field"
+                  placeholder="passenger@email.com"
+                  value={passengers[i]?.email ?? ''}
+                  onChange={e => updatePassenger(i, 'email', e.target.value)}
+                />
+              </div>
 
               {/* Disability question */}
               <label className="flex items-start gap-3 cursor-pointer group">

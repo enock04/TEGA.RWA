@@ -11,9 +11,11 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'postgres',
   user:     process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
-  max: 20,
+  max: parseInt(process.env.DB_POOL_MAX) || 25,
+  min: 2,
   idleTimeoutMillis:       30000,
   connectionTimeoutMillis: 10000,
+  statement_timeout:       30000,  // 30 s max per query
   ssl: isSupabase ? { rejectUnauthorized: false } : false,
 });
 
@@ -24,8 +26,8 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected database error:', err);
-  process.exit(-1);
+  // Log but don't crash — idle client errors are non-fatal
+  console.error('Unexpected database pool error:', err.message);
 });
 
 const query = (text, params) => pool.query(text, params);

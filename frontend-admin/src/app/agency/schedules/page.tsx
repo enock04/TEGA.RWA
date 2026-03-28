@@ -60,6 +60,7 @@ export default function AgencySchedulesPage() {
     if (!form.busId || !form.routeId || !form.departureTime || !form.arrivalTime || !form.basePrice) {
       toast.error('Fill all required fields'); return;
     }
+    if (+form.basePrice <= 0) { toast.error('Price must be greater than 0'); return; }
     if (new Date(form.arrivalTime) <= new Date(form.departureTime)) {
       toast.error('Arrival time must be after departure time'); return;
     }

@@ -1,0 +1,446 @@
+<mxfile host="app.diagrams.net" modified="2026-03-28T00:00:00.000Z" agent="Claude" version="21.0.0">
+  <diagram id="TEGA_RW_ERD" name="TEGA.Rw Entity Relationship Diagram">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- AGENCIES  (x=60, y=60) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_ag" value="agencies" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="300" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_id" value="PK  id : UUID" style="text;strokeColor=#6c8ebf;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_ag">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_name" value="    name : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_ag">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_regno" value="    registration_no : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_cphone" value="    contact_phone : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_cemail" value="    contact_email : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_addr" value="    address : TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_logo" value="    logo_url : TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="210" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_active" value="    is_active : BOOLEAN DEFAULT true" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="240" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_ag_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_ag">
+          <mxGeometry y="270" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- BUSES  (x=60, y=420) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_b" value="buses" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="420" width="300" height="270" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_id" value="PK  id : UUID" style="text;strokeColor=#6c8ebf;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_b">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_agid" value="FK  agency_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_b">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_plate" value="    plate_number : VARCHAR UNIQUE NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_b">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_name" value="    bus_name : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_b">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_cap" value="    capacity : INTEGER NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_b">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_type" value="    bus_type : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_b">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_active" value="    is_active : BOOLEAN DEFAULT true" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_b">
+          <mxGeometry y="210" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_b_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_b">
+          <mxGeometry y="240" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SEATS  (x=60, y=750) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_s" value="seats" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="750" width="300" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_s_id" value="PK  id : UUID" style="text;strokeColor=#6c8ebf;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_s">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_s_bid" value="FK  bus_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_s">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_s_num" value="    seat_number : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_s">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_s_active" value="    is_active : BOOLEAN DEFAULT true" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_s">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- ROUTES  (x=440, y=60) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_r" value="routes" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="440" y="60" width="300" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_r_id" value="PK  id : UUID" style="text;strokeColor=#9673a6;fillColor=#e1d5e7;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_r">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_r_depst" value="FK  departure_station_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_r">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_r_destst" value="FK  destination_station_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_r">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_r_dist" value="    distance_km : DECIMAL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_r">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_r_dur" value="    estimated_duration : INTEGER (minutes)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_r">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_r_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_r">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SCHEDULES  (x=440, y=340) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_sc" value="schedules" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="440" y="340" width="300" height="270" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_id" value="PK  id : UUID" style="text;strokeColor=#9673a6;fillColor=#e1d5e7;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_sc">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_bid" value="FK  bus_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_sc">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_rid" value="FK  route_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_sc">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_dep" value="    departure_time : TIMESTAMPTZ NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_sc">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_arr" value="    arrival_time : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_sc">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_price" value="    base_price : DECIMAL NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_sc">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_status" value="    status : VARCHAR (scheduled/departed/completed/cancelled)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_sc">
+          <mxGeometry y="210" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_sc_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_sc">
+          <mxGeometry y="240" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- BOOKINGS  (x=440, y=680) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_bk" value="bookings" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="440" y="680" width="300" height="390" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_id" value="PK  id : UUID" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_bk">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_uid" value="FK  user_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_bk">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_scid" value="FK  schedule_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_bk">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_sid" value="FK  seat_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_bk">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_pname" value="    passenger_name : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_pphone" value="    passenger_phone : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_pemail" value="    passenger_email : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="210" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_amt" value="    amount : DECIMAL NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="240" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_status" value="    status : VARCHAR (pending/confirmed/cancelled/expired)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="270" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_refstat" value="    refund_status : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="300" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="330" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_bk_expires" value="    expires_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_bk">
+          <mxGeometry y="360" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- PAYMENTS  (x=440, y=1140) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_p" value="payments" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="440" y="1140" width="300" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_id" value="PK  id : UUID" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_p">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_bkid" value="FK  booking_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_p">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_method" value="    method : VARCHAR (mtn_momo / airtel_money)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_amt" value="    amount : DECIMAL NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_status" value="    status : VARCHAR (pending/completed/failed/refunded)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_phone" value="    payer_phone : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_ref" value="    provider_reference : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="210" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_refat" value="    refunded_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="240" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_p_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_p">
+          <mxGeometry y="270" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- USERS  (x=820, y=60) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_u" value="users" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="60" width="300" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_id" value="PK  id : UUID" style="text;strokeColor=#b85450;fillColor=#f8cecc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_u">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_fname" value="    full_name : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_phone" value="    phone_number : VARCHAR UNIQUE NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_email" value="    email : VARCHAR UNIQUE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_hash" value="    password_hash : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_role" value="    role : VARCHAR (passenger/agency/admin)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_active" value="    is_active : BOOLEAN DEFAULT true" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="210" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_agid" value="FK  agency_id : UUID (nullable)" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_u">
+          <mxGeometry y="240" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_u_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_u">
+          <mxGeometry y="270" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- STATIONS  (x=820, y=430) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_st" value="stations" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="430" width="300" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_st_id" value="PK  id : UUID" style="text;strokeColor=#b85450;fillColor=#f8cecc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_st">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_st_name" value="    name : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_st">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_st_prov" value="    province : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_st">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_st_addr" value="    address : TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_st">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_st_created" value="    created_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_st">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- TICKETS  (x=820, y=680) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_tk" value="tickets" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="680" width="300" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_tk_id" value="PK  id : UUID" style="text;strokeColor=#d6b656;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_tk">
+          <mxGeometry y="30" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_tk_bkid" value="FK  booking_id : UUID" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_tk">
+          <mxGeometry y="60" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_tk_num" value="    ticket_number : VARCHAR UNIQUE NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_tk">
+          <mxGeometry y="90" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_tk_qr" value="    qr_code_data : TEXT (base64 PNG)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_tk">
+          <mxGeometry y="120" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_tk_used" value="    is_used : BOOLEAN DEFAULT false" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_tk">
+          <mxGeometry y="150" width="300" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_tk_issued" value="    issued_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_tk">
+          <mxGeometry y="180" width="300" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- AGENCY_APPLICATIONS  (x=1200, y=60) -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="t_aa" value="agency_applications" style="swimlane;fontStyle=1;align=center;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="60" width="320" height="450" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_id" value="PK  id : UUID" style="text;strokeColor=#6c8ebf;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontStyle=1;" vertex="1" parent="t_aa">
+          <mxGeometry y="30" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_cname" value="    company_name : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="60" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_coname" value="    contact_name : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="90" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_cophone" value="    contact_phone : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="120" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_coemail" value="    contact_email : VARCHAR NOT NULL" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="150" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_regno" value="    registration_no : VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="180" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_addr" value="    address : TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="210" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_fleet" value="    fleet_size : INTEGER" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="240" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_routes" value="    routes_description : TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="270" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_status" value="    status : VARCHAR (pending/approved/rejected)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="300" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_subat" value="    submitted_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="330" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_revat" value="    reviewed_at : TIMESTAMPTZ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="360" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_revby" value="FK  reviewed_by : UUID (nullable)" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" vertex="1" parent="t_aa">
+          <mxGeometry y="390" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="r_aa_reason" value="    rejection_reason : TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="t_aa">
+          <mxGeometry y="420" width="320" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- RELATIONSHIPS -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+
+        <!-- agencies → buses  (1:N) -->
+        <mxCell id="e1" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;" edge="1" source="r_ag_id" target="r_b_agid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- agencies → users  (1:N) -->
+        <mxCell id="e2" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;" edge="1" source="r_ag_id" target="r_u_agid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- buses → seats  (1:N) -->
+        <mxCell id="e3" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;" edge="1" source="r_b_id" target="r_s_bid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- buses → schedules  (1:N) -->
+        <mxCell id="e4" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;" edge="1" source="r_b_id" target="r_sc_bid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- routes → schedules  (1:N) -->
+        <mxCell id="e5" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#9673a6;fontStyle=1;fontSize=10;" edge="1" source="r_r_id" target="r_sc_rid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- stations → routes.departure_station_id  (1:N) -->
+        <mxCell id="e6" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#b85450;fontStyle=1;fontSize=10;" edge="1" source="r_st_id" target="r_r_depst" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- stations → routes.destination_station_id  (1:N) -->
+        <mxCell id="e7" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#b85450;fontStyle=1;fontSize=10;dashed=1;" edge="1" source="r_st_id" target="r_r_destst" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- users → bookings  (1:N) -->
+        <mxCell id="e8" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#b85450;fontStyle=1;fontSize=10;" edge="1" source="r_u_id" target="r_bk_uid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- schedules → bookings  (1:N) -->
+        <mxCell id="e9" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#9673a6;fontStyle=1;fontSize=10;" edge="1" source="r_sc_id" target="r_bk_scid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- seats → bookings  (1:N) -->
+        <mxCell id="e10" value="1:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmanyToOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#6c8ebf;fontStyle=1;fontSize=10;" edge="1" source="r_s_id" target="r_bk_sid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- bookings → payments  (1:1) -->
+        <mxCell id="e11" value="1:1" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmandOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#d6b656;fontStyle=1;fontSize=10;" edge="1" source="r_bk_id" target="r_p_bkid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- bookings → tickets  (1:1) -->
+        <mxCell id="e12" value="1:1" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERmandOne;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#d6b656;fontStyle=1;fontSize=10;" edge="1" source="r_bk_id" target="r_tk_bkid" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- users → agency_applications.reviewed_by  (1:N, optional/dashed) -->
+        <mxCell id="e13" value="0:N" style="edgeStyle=orthogonalEdgeStyle;endArrow=ERzeroToMany;startArrow=ERmandOne;endFill=0;startFill=0;strokeColor=#b85450;fontStyle=1;fontSize=10;dashed=1;" edge="1" source="r_u_id" target="r_aa_revby" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- LEGEND -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <mxCell id="legend" value="Legend" style="swimlane;fontStyle=1;align=center;startSize=25;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="980" width="300" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="l1" value="PK  — Primary Key (blue background)" style="text;strokeColor=none;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="legend">
+          <mxGeometry y="25" width="300" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="l2" value="FK  — Foreign Key (green background)" style="text;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="legend">
+          <mxGeometry y="51" width="300" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="l3" value="1:N  — One to Many relationship" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="legend">
+          <mxGeometry y="77" width="300" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="l4" value="1:1  — One to One  |  0:N — Optional" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;overflow=hidden;rotatable=0;" vertex="1" parent="legend">
+          <mxGeometry y="103" width="300" height="26" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

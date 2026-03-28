@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { query, getClient } = require('../../config/database');
 const logger = require('../../utils/logger');
+const { issueTicket } = require('../tickets/tickets.service');
 
 // ─────────────────────────────────────────────
 // Mock payment providers (replace with real SDKs in production)
@@ -36,6 +37,101 @@ const checkMockProviderStatus = async (providerReference, method) => {
   // For MVP mock: always resolve as completed after initiation
   logger.info(`[MOCK] Checking payment status for ref: ${providerReference}`);
   return { status: 'SUCCESSFUL', providerReference };
+};
+
+// ─────────────────────────────────────────────
+// Initiate a single group payment covering multiple bookings
+// ─────────────────────────────────────────────
+
+const initiateGroupPayment = async ({ bookingIds, userId, method, payerPhone }) => {
+  if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+    const err = new Error('bookingIds must be a non-empty array');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Validate all bookings belong to user and are pending
+  const bookingResult = await query(
+    `SELECT id, amount, status, user_id FROM bookings WHERE id = ANY($1::uuid[])`,
+    [bookingIds]
+  );
+
+  if (bookingResult.rows.length !== bookingIds.length) {
+    const err = new Error('One or more bookings not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  for (const b of bookingResult.rows) {
+    if (b.user_id !== userId) {
+      const err = new Error('Unauthorized to pay for one or more bookings');
+      err.statusCode = 403;
+      throw err;
+    }
+    if (b.status !== 'pending') {
+      const err = new Error(`Booking is already ${b.status}`);
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  // Check no active payment already in progress for any booking
+  const existingPayment = await query(
+    `SELECT id FROM payments WHERE booking_id = ANY($1::uuid[]) AND status IN ('pending', 'processing')`,
+    [bookingIds]
+  );
+  if (existingPayment.rows.length) {
+    const err = new Error('A payment is already in progress for one or more of these bookings');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const totalAmount = bookingResult.rows.reduce((sum, b) => sum + parseFloat(b.amount), 0);
+  const primaryBookingId = bookingIds[0];
+  const groupBookingIds = bookingIds.slice(1);
+
+  // Call mock provider with the total amount
+  let providerResponse;
+  if (method === 'mtn_momo') {
+    providerResponse = await mockMtnMomo({ amount: totalAmount, phoneNumber: payerPhone, bookingId: primaryBookingId });
+  } else if (method === 'airtel_money') {
+    providerResponse = await mockAirtelMoney({ amount: totalAmount, phoneNumber: payerPhone, bookingId: primaryBookingId });
+  } else {
+    const err = new Error('Unsupported payment method');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const paymentId = uuidv4();
+  await query(
+    `INSERT INTO payments
+       (id, booking_id, user_id, amount, currency, method, status, provider_reference, provider_response, group_booking_ids)
+     VALUES ($1, $2, $3, $4, 'RWF', $5, 'processing', $6, $7, $8)`,
+    [
+      paymentId,
+      primaryBookingId,
+      userId,
+      totalAmount,
+      method,
+      providerResponse.referenceId,
+      JSON.stringify(providerResponse),
+      JSON.stringify(groupBookingIds),
+    ]
+  );
+
+  return {
+    paymentId,
+    bookingIds,
+    amount: totalAmount,
+    currency: 'RWF',
+    method,
+    providerReference: providerResponse.referenceId,
+    status: 'processing',
+    message: providerResponse.message,
+    instructions: method === 'mtn_momo'
+      ? `A payment prompt has been sent to ${payerPhone}. Enter your MTN MoMo PIN to confirm.`
+      : `A payment prompt has been sent to ${payerPhone}. Enter your Airtel Money PIN to confirm.`,
+  };
 };
 
 // ─────────────────────────────────────────────
@@ -144,6 +240,7 @@ const confirmPayment = async ({ paymentId, userId }) => {
       [paymentId]
     );
 
+
     if (!paymentResult.rows.length) {
       const err = new Error('Payment not found');
       err.statusCode = 404;
@@ -192,13 +289,24 @@ const confirmPayment = async ({ paymentId, userId }) => {
       [paymentId, JSON.stringify(providerStatus)]
     );
 
-    // Confirm booking
+    // Confirm primary booking
     await client.query(
       `UPDATE bookings
        SET status = 'confirmed', expires_at = NULL, updated_at = NOW()
        WHERE id = $1`,
       [payment.booking_id]
     );
+
+    // Confirm all group bookings covered by this payment
+    const groupBookingIds = payment.group_booking_ids || [];
+    if (groupBookingIds.length > 0) {
+      await client.query(
+        `UPDATE bookings
+         SET status = 'confirmed', expires_at = NULL, updated_at = NOW()
+         WHERE id = ANY($1::uuid[])`,
+        [groupBookingIds]
+      );
+    }
 
     await client.query('COMMIT');
 
@@ -210,6 +318,11 @@ const confirmPayment = async ({ paymentId, userId }) => {
        WHERE p.id = $1`,
       [paymentId]
     );
+
+    // Issue tickets and send emails/SMS for all confirmed bookings (fire-and-forget)
+    const allBookingIds = [payment.booking_id, ...(payment.group_booking_ids || [])];
+    Promise.all(allBookingIds.map(id => issueTicket(id)))
+      .catch(err => logger.error('Ticket issuance after payment failed:', err));
 
     return { alreadyConfirmed: false, payment: updatedPayment.rows[0] };
   } catch (err) {
@@ -410,6 +523,7 @@ const refundPayment = async ({ bookingId, userId, isAdmin = false }) => {
 
 module.exports = {
   initiatePayment,
+  initiateGroupPayment,
   confirmPayment,
   handleWebhook,
   getPaymentByBooking,

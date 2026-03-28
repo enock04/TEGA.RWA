@@ -57,6 +57,28 @@ router.post('/initiate',
   controller.initiate
 );
 
+router.post('/initiate-batch',
+  authenticate,
+  [
+    body('bookingIds')
+      .isArray({ min: 1 })
+      .withMessage('bookingIds must be a non-empty array'),
+    body('bookingIds.*')
+      .matches(/^[0-9a-f-]{36}$/i)
+      .withMessage('Each bookingId must be a valid UUID'),
+    body('method')
+      .isIn(['mtn_momo', 'airtel_money'])
+      .withMessage('Method must be mtn_momo or airtel_money'),
+    body('payerPhone')
+      .trim()
+      .notEmpty()
+      .matches(/^\+?[0-9]{10,15}$/)
+      .withMessage('Invalid payer phone number'),
+  ],
+  validate,
+  controller.initiateGroup
+);
+
 /**
  * @swagger
  * /payments/{paymentId}/confirm:

@@ -24,14 +24,20 @@ const generateTokens = (userId, role) => {
 };
 
 const register = async ({ fullName, phoneNumber, email, password, role = 'passenger' }) => {
-  const existing = await query(
-    'SELECT id FROM users WHERE phone_number = $1 OR (email IS NOT NULL AND email = $2)',
-    [phoneNumber, email || null]
-  );
-  if (existing.rows.length) {
-    const err = new Error('User with this phone number or email already exists');
+  const phoneCheck = await query('SELECT id FROM users WHERE phone_number = $1', [phoneNumber]);
+  if (phoneCheck.rows.length) {
+    const err = new Error('This phone number is already registered');
     err.statusCode = 409;
     throw err;
+  }
+
+  if (email) {
+    const emailCheck = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (emailCheck.rows.length) {
+      const err = new Error('This email address is already registered');
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   const passwordHash = await bcrypt.hash(password, 12);

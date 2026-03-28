@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,7 +23,17 @@ type Step = 'form' | 'processing' | 'confirming';
 export default function PaymentPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const searchParams = useSearchParams();
+  const groupIds = searchParams.get('group')?.split(',').filter(Boolean) ?? [];
+
+  // All booking IDs covered by this single payment
+  const allBookingIds = [bookingId, ...groupIds];
+  const isGroup = groupIds.length > 0;
+
+  // After payment confirmed, go back to the full summary with paid flag so it shows the email alert
+  const summaryHref = `/booking/summary/${bookingId}?paid=1${isGroup ? `&group=${groupIds.join(',')}` : ''}`;
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>('form');
   const [paymentId, setPaymentId] = useState('');
@@ -37,24 +47,39 @@ export default function PaymentPage() {
   const method = watch('method');
 
   useEffect(() => {
-    bookingsApi.getSummary(bookingId)
-      .then(res => {
-        const b = res.data.data.booking;
-        if (b.status !== 'pending') {
-          if (b.status === 'confirmed') router.push(`/ticket/${bookingId}`);
-          else { toast.error('Booking is not payable'); router.push('/dashboard'); }
+    Promise.all(allBookingIds.map(id => bookingsApi.getSummary(id).then(r => r.data.data.booking)))
+      .then(results => {
+        // If any booking is already confirmed, go to summary
+        if (results.every(b => b.status === 'confirmed')) {
+          router.push(summaryHref);
           return;
         }
-        setBooking(b);
+        const unpayable = results.find(b => b.status !== 'pending' && b.status !== 'confirmed');
+        if (unpayable) {
+          toast.error('One or more bookings are not payable');
+          router.push('/dashboard');
+          return;
+        }
+        setBookings(results.filter(b => b.status === 'pending'));
       })
       .catch(() => { toast.error('Booking not found'); router.push('/dashboard'); })
       .finally(() => setLoading(false));
-  }, [bookingId, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId]);
+
+  const totalAmount = bookings.reduce((sum, b) => sum + Number(b.amount), 0);
+  const primaryBooking = bookings[0] ?? null;
 
   const onSubmit = async (data: FormData) => {
     setStep('processing');
     try {
-      const res = await paymentsApi.initiate({ bookingId, ...data });
+      let res;
+      if (isGroup) {
+        // One payment for all bookings combined
+        res = await paymentsApi.initiateGroup({ bookingIds: allBookingIds, ...data });
+      } else {
+        res = await paymentsApi.initiate({ bookingId, ...data });
+      }
       const { paymentId: pid, instructions: inst } = res.data.data;
       setPaymentId(pid);
       setInstructions(inst);
@@ -76,8 +101,8 @@ export default function PaymentPage() {
         const status = res.data.data.payment?.status;
         if (status === 'completed') {
           clearInterval(interval);
-          toast.success('Payment confirmed! Your booking is now active.');
-          router.push(`/ticket/${bookingId}`);
+          toast.success('Payment confirmed! Check your email for your ticket.');
+          router.push(summaryHref);
           return;
         }
         if (status === 'failed') {
@@ -94,14 +119,16 @@ export default function PaymentPage() {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [step, paymentId, bookingId, router]);
+  }, [step, paymentId, bookingId, router, summaryHref]);
 
   const handleConfirm = async () => {
     setStep('confirming');
     try {
       await paymentsApi.confirm(paymentId);
-      toast.success('Payment confirmed! Your booking is now active.');
-      router.push(`/ticket/${bookingId}`);
+      toast.success(isGroup
+        ? `Payment confirmed! Tickets sent to each passenger's email.`
+        : 'Payment confirmed! Check your email for your ticket.');
+      router.push(summaryHref);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Payment confirmation failed');
       setStep('processing');
@@ -110,29 +137,55 @@ export default function PaymentPage() {
 
   if (loading) return (
     <MainLayout>
-      <AppHeader title="Payment" showBack backHref={`/booking/summary/${bookingId}`} />
+      <AppHeader title="Payment" showBack backHref={summaryHref} />
       <div className="flex items-center justify-center py-32 gap-3 text-gray-500">
         <Spinner /><span>Loading...</span>
       </div>
     </MainLayout>
   );
 
-  if (!booking) return null;
+  if (!primaryBooking) return null;
 
   return (
     <MainLayout>
-      <AppHeader title="Complete Payment" showBack backHref={`/booking/summary/${bookingId}`} />
+      <AppHeader title="Complete Payment" showBack backHref={summaryHref} />
 
       <div className="px-4 py-5 space-y-4">
         {/* Amount due */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1">Amount Due</p>
-          <p className="text-3xl font-bold text-amber-400">RWF {Number(booking.amount).toLocaleString()}</p>
+          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1">
+            {isGroup ? `Total Amount (${allBookingIds.length} passengers)` : 'Amount Due'}
+          </p>
+          <p className="text-3xl font-bold text-amber-400">RWF {totalAmount.toLocaleString()}</p>
           <div className="flex items-center gap-2 mt-2 text-gray-400 text-sm">
-            <span>{booking.route_name}</span>
-            <span className="text-gray-600">•</span>
-            <span>Seat #{booking.seat_number}</span>
+            <span>{primaryBooking.route_name}</span>
           </div>
+
+          {/* Per-passenger breakdown for groups */}
+          {isGroup && bookings.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-800 space-y-1.5">
+              {bookings.map((b, i) => (
+                <div key={b.id} className="flex justify-between text-sm">
+                  <span className="text-gray-500">
+                    {b.passenger_name} · Seat #{b.seat_number}
+                  </span>
+                  <span className="text-gray-400">RWF {Number(b.amount).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!isGroup && (
+            <div className="flex items-center gap-2 mt-1 text-gray-500 text-sm">
+              <span>Seat #{primaryBooking.seat_number}</span>
+              {primaryBooking.passenger_name && (
+                <>
+                  <span className="text-gray-600">•</span>
+                  <span>{primaryBooking.passenger_name}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {step === 'form' && (
@@ -180,7 +233,8 @@ export default function PaymentPage() {
             </div>
 
             <button type="submit" className="btn-primary w-full py-4 text-base font-bold">
-              Pay RWF {Number(booking.amount).toLocaleString()}
+              Pay RWF {totalAmount.toLocaleString()}
+              {isGroup && ` · ${allBookingIds.length} passengers`}
             </button>
           </form>
         )}
@@ -198,7 +252,7 @@ export default function PaymentPage() {
               After entering your PIN, tap the button below to confirm.
             </div>
             <button type="button" onClick={handleConfirm} className="btn-primary w-full py-4">
-              I&apos;ve Paid — Confirm Booking
+              I&apos;ve Paid — Confirm Booking{isGroup ? 's' : ''}
             </button>
             <button type="button" onClick={() => setStep('form')} className="text-sm text-gray-400 underline">
               Go back

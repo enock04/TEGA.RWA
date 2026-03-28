@@ -167,3 +167,38 @@
            transition-colors cursor-pointer;
   }
 }
+
+/* ── Print: show only the ticket card ──────────────────────────────────────── */
+@media print {
+  @page { margin: 10mm; size: A5 portrait; }
+
+  /* Reset layout containers */
+  html, body { background: white !important; color: black !important; }
+  .app-shell  { box-shadow: none !important; max-width: 100% !important; }
+  .page-content, .page-content-no-nav { overflow: visible !important; padding-bottom: 0 !important; }
+
+  /* Hide chrome — header, bottom nav, and anything marked no-print */
+  .app-bar,
+  .bottom-nav,
+  .no-print { display: none !important; }
+
+  /* Ticket card — light colours for paper */
+  .print-ticket {
+    border: 1px solid #d1d5db !important;
+    border-radius: 12px !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+  .print-ticket .bg-gray-900,
+  .print-ticket .bg-gray-800,
+  .print-ticket [class*="bg-gray-8"] { background: white !important; }
+  .print-ticket .text-white,
+  .print-ticket .text-gray-300,
+  .print-ticket .text-gray-400,
+  .print-ticket .text-gray-500 { color: #111 !important; }
+  .print-ticket .text-amber-400  { color: #b45309 !important; }
+  .print-ticket .border-gray-700,
+  .print-ticket .border-gray-800 { border-color: #d1d5db !important; }
+  .print-ticket .bg-gray-700     { background: #f3f4f6 !important; }
+}

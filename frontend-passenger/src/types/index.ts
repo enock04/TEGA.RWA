@@ -132,6 +132,7 @@ export interface Booking {
   arrival_station?: string;
   arrival_city?: string;
   base_price?: number;
+  special_assistance?: boolean;
 }
 
 // ─────────────────────────────────────────────
@@ -188,6 +189,7 @@ export interface Ticket {
   arrival_time?: string;
   seat_number?: number;
   amount?: number;
+  special_assistance?: boolean;
 }
 
 // ─────────────────────────────────────────────

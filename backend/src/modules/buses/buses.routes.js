@@ -36,7 +36,18 @@ router.post('/',
   controller.create
 );
 
-router.put('/:id', authenticate, authorize('admin', 'agency'), controller.update);
+router.put('/:id',
+  authenticate,
+  authorize('admin', 'agency'),
+  [
+    body('name').optional().trim().notEmpty().withMessage('Bus name cannot be empty'),
+    body('plateNumber').optional().trim().notEmpty().withMessage('Plate number cannot be empty'),
+    body('totalSeats').optional().isInt({ min: 1, max: 100 }).withMessage('Total seats must be between 1 and 100'),
+    body('busType').optional().isIn(['standard', 'luxury', 'minibus', 'coach']).withMessage('Invalid bus type'),
+  ],
+  validate,
+  controller.update
+);
 router.delete('/:id', authenticate, authorize('admin'), controller.remove);
 
 module.exports = router;

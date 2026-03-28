@@ -17,6 +17,21 @@ const refund = async (req, res, next) => {
   }
 };
 
+const initiateGroup = async (req, res, next) => {
+  try {
+    const { bookingIds, method, payerPhone } = req.body;
+    const result = await paymentsService.initiateGroupPayment({
+      bookingIds,
+      userId: req.user.id,
+      method,
+      payerPhone,
+    });
+    return created(res, result, 'Payment initiated');
+  } catch (err) {
+    next(err);
+  }
+};
+
 const initiate = async (req, res, next) => {
   try {
     const { bookingId, method, payerPhone } = req.body;
@@ -88,4 +103,4 @@ const webhook = async (req, res, next) => {
   }
 };
 
-module.exports = { initiate, confirm, getByBooking, getAll, webhook, refund };
+module.exports = { initiate, initiateGroup, confirm, getByBooking, getAll, webhook, refund };

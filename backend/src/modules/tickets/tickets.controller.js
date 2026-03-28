@@ -5,6 +5,9 @@ const { success } = require('../../utils/response');
 const downloadPDF = async (req, res, next) => {
   try {
     const ticket = await ticketsService.getTicketByBooking(req.params.bookingId);
+    if (req.user.role === 'passenger' && ticket.user_id && ticket.user_id !== req.user.id) {
+      return next(Object.assign(new Error('Not found'), { statusCode: 404 }));
+    }
     const pdfBuffer = await generateTicketPDF(ticket);
     const filename = `ticket-${ticket.ticket_number}.pdf`;
     res.set({
@@ -32,6 +35,10 @@ const resend = async (req, res, next) => {
 const getByBooking = async (req, res, next) => {
   try {
     const ticket = await ticketsService.getTicketByBooking(req.params.bookingId);
+    // Passengers can only view their own tickets
+    if (req.user.role === 'passenger' && ticket.user_id && ticket.user_id !== req.user.id) {
+      return next(Object.assign(new Error('Not found'), { statusCode: 404 }));
+    }
     return success(res, { ticket });
   } catch (err) {
     next(err);

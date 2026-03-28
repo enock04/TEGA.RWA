@@ -44,7 +44,7 @@ router.post('/register',
       .trim()
       .notEmpty().withMessage('Phone number is required')
       .matches(/^\+?[0-9]{10,15}$/).withMessage('Invalid phone number format'),
-    body('email').optional().isEmail().withMessage('Invalid email address').normalizeEmail(),
+    body('email').trim().isEmail().withMessage('Valid email address is required').toLowerCase(),
     body('password')
       .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
       .matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and number'),
@@ -130,7 +130,7 @@ router.put('/change-password',
 router.get('/profile', authenticate, controller.getProfile);
 
 router.post('/forgot-password',
-  [body('phoneNumber').trim().notEmpty().withMessage('Phone number is required')],
+  [body('phoneNumber').trim().notEmpty().withMessage('Phone number is required').matches(/^\+?[0-9]{10,15}$/).withMessage('Invalid phone number format')],
   validate,
   controller.forgotPassword
 );

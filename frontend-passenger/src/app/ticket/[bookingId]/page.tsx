@@ -85,7 +85,7 @@ export default function TicketPage() {
 
       <div className="px-4 py-5 space-y-4">
         {/* Success banner */}
-        <div className="flex items-center gap-3 bg-emerald-950 border border-emerald-800 rounded-2xl p-4">
+        <div className="no-print flex items-center gap-3 bg-emerald-950 border border-emerald-800 rounded-2xl p-4">
           <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -98,7 +98,7 @@ export default function TicketPage() {
         </div>
 
         {/* Ticket card */}
-        <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+        <div className="print-ticket bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
           {/* Header */}
           <div className="bg-gray-800 border-b border-gray-700 px-5 py-4">
             <div className="flex items-center justify-between">
@@ -168,6 +168,17 @@ export default function TicketPage() {
             </div>
           </div>
 
+          {/* Special assistance banner */}
+          {ticket.special_assistance && (
+            <div className="mx-5 my-4 flex items-center gap-3 bg-blue-950 border border-blue-800 rounded-xl px-4 py-3">
+              <span className="text-2xl" aria-hidden="true">♿</span>
+              <div>
+                <p className="text-blue-300 font-semibold text-sm">Special Assistance Required</p>
+                <p className="text-blue-500 text-xs mt-0.5">This passenger requires special assistance or has a disability. Please ensure appropriate support is arranged at boarding.</p>
+              </div>
+            </div>
+          )}
+
           {/* QR Code */}
           <div className="px-5 py-5 flex flex-col items-center gap-3">
             <p className="text-xs text-gray-500 uppercase tracking-wide">Scan at boarding</p>
@@ -189,7 +200,7 @@ export default function TicketPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="no-print flex gap-3">
           <button type="button" onClick={handlePrint} className="btn-secondary flex-1 flex items-center justify-center gap-2 py-3.5">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -204,7 +215,7 @@ export default function TicketPage() {
             PDF
           </button>
         </div>
-        <div className="flex gap-3">
+        <div className="no-print flex gap-3">
           <button type="button" onClick={handleResend} disabled={resending}
             className="btn-secondary flex-1 flex items-center justify-center gap-2 py-3.5 disabled:opacity-60">
             {resending ? (

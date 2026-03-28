@@ -41,7 +41,6 @@ function SearchContent() {
     departureStationId: params.get('from') || '',
     destinationStationId: params.get('to') || '',
     date: params.get('date') || format(new Date(), 'yyyy-MM-dd'),
-    passengers: 1,
   });
 
   useEffect(() => {
@@ -143,32 +142,17 @@ function SearchContent() {
               </select>
             </div>
 
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">{t('search.travelDate')}</label>
-                <input
-                  type="date"
-                  title={t('search.travelDate')}
-                  placeholder={t('search.travelDate')}
-                  className="input-field"
-                  value={form.date}
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                />
-              </div>
-              <div className="w-36">
-                <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">{t('search.passengers')}</label>
-                <select
-                  title={t('search.passengers')}
-                  className="input-field"
-                  value={form.passengers}
-                  onChange={e => setForm(f => ({ ...f, passengers: Number(e.target.value) }))}
-                >
-                  {[1, 2, 3, 4, 5, 6].map(n => (
-                    <option key={n} value={n}>{n} {n === 1 ? t('search.passenger') : t('search.passengers')}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1 block">{t('search.travelDate')}</label>
+              <input
+                type="date"
+                title={t('search.travelDate')}
+                placeholder={t('search.travelDate')}
+                className="input-field"
+                value={form.date}
+                min={format(new Date(), 'yyyy-MM-dd')}
+                onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              />
             </div>
 
             <button

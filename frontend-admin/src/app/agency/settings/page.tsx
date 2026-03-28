@@ -46,6 +46,7 @@ export default function AgencySettingsPage() {
   const handleChangePassword = async () => {
     if (!pwForm.currentPassword || !pwForm.newPassword) { toast.error('Fill in all password fields'); return; }
     if (pwForm.newPassword.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(pwForm.newPassword)) { toast.error('Password must contain uppercase, lowercase, and a number'); return; }
     if (pwForm.newPassword !== pwForm.confirmPassword) { toast.error('Passwords do not match'); return; }
     setSavingPw(true);
     try {

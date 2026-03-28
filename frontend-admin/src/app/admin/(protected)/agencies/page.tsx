@@ -110,6 +110,8 @@ export default function AdminAgenciesPage() {
 
   const handleCreate = async () => {
     if (!form.name.trim()) { toast.error('Agency name is required'); return; }
+    if (form.contactPhone && !/^\+?[0-9]{10,15}$/.test(form.contactPhone.trim())) { toast.error('Invalid phone number format'); return; }
+    if (form.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim())) { toast.error('Invalid email address'); return; }
     setSaving(true);
     try {
       const res = await adminApi.createAgency({
@@ -137,6 +139,8 @@ export default function AdminAgenciesPage() {
 
   const handleEdit = async (id: string) => {
     if (!editForm.name.trim()) { toast.error('Agency name is required'); return; }
+    if (editForm.contactPhone && !/^\+?[0-9]{10,15}$/.test(editForm.contactPhone.trim())) { toast.error('Invalid phone number format'); return; }
+    if (editForm.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.contactEmail.trim())) { toast.error('Invalid email address'); return; }
     setEditSaving(true);
     try {
       const res = await adminApi.updateAgency(id, {

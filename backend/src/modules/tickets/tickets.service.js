@@ -15,6 +15,7 @@ const issueTicket = async (bookingId) => {
   // Idempotent — return existing ticket if already issued
   const existing = await query(
     `SELECT t.*, bk.passenger_name, bk.passenger_phone, bk.passenger_email,
+            bk.special_assistance,
             s.seat_number, sc.departure_time, sc.arrival_time,
             b.name AS bus_name, b.plate_number,
             r.name AS route_name,
@@ -121,7 +122,7 @@ const issueTicket = async (bookingId) => {
 const getTicketByBooking = async (bookingId) => {
   const result = await query(
     `SELECT t.*,
-            bk.passenger_name, bk.passenger_phone, bk.passenger_email,
+            bk.user_id, bk.passenger_name, bk.passenger_phone, bk.passenger_email,
             bk.amount, bk.status AS booking_status,
             s.seat_number, s.seat_class,
             sc.departure_time, sc.arrival_time,

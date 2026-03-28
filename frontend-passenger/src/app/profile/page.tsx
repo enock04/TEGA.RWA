@@ -33,6 +33,7 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!profileForm.fullName.trim()) { toast.error('Name is required'); return; }
+    if (profileForm.fullName.trim().length < 2) { toast.error('Name must be at least 2 characters'); return; }
     setSavingProfile(true);
     try {
       const res = await usersApi.updateProfile({ fullName: profileForm.fullName, email: profileForm.email || undefined });
@@ -45,6 +46,7 @@ export default function ProfilePage() {
   const handleChangePassword = async () => {
     if (!pwForm.currentPassword || !pwForm.newPassword) { toast.error('Fill in all password fields'); return; }
     if (pwForm.newPassword.length < 8) { toast.error(t('profile.passwordMin')); return; }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(pwForm.newPassword)) { toast.error('Password must contain uppercase, lowercase, and a number'); return; }
     if (pwForm.newPassword !== pwForm.confirmPassword) { toast.error(t('auth.passwordsDontMatch')); return; }
     setSavingPw(true);
     try {

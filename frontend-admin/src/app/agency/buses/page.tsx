@@ -34,7 +34,10 @@ export default function AgencyBusesPage() {
   const closeForm = () => { setShowForm(false); setEditing(null); };
 
   const handleSave = async () => {
-    if (!form.name || !form.plateNumber || !form.totalSeats) { toast.error('Fill all required fields'); return; }
+    if (!form.name.trim()) { toast.error('Bus name is required'); return; }
+    if (form.name.trim().length < 2) { toast.error('Bus name must be at least 2 characters'); return; }
+    if (!form.plateNumber.trim()) { toast.error('Plate number is required'); return; }
+    if (!form.totalSeats || +form.totalSeats < 1 || +form.totalSeats > 100) { toast.error('Total seats must be between 1 and 100'); return; }
     setSaving(true);
     try {
       const payload = { ...form, totalSeats: +form.totalSeats };

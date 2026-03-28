@@ -30,9 +30,13 @@ export default function ApplyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.companyName.trim()) { toast.error('Company name is required'); return; }
+    if (form.companyName.trim().length < 2) { toast.error('Company name must be at least 2 characters'); return; }
     if (!form.contactName.trim()) { toast.error('Contact name is required'); return; }
+    if (form.contactName.trim().length < 2) { toast.error('Contact name must be at least 2 characters'); return; }
     if (!form.contactPhone.trim()) { toast.error('Contact phone is required'); return; }
+    if (!/^\+?[0-9]{10,15}$/.test(form.contactPhone.trim())) { toast.error('Invalid phone number format'); return; }
     if (!form.contactEmail.trim()) { toast.error('Contact email is required'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail.trim())) { toast.error('Invalid email address'); return; }
 
     setSaving(true);
     try {
@@ -47,8 +51,9 @@ export default function ApplyPage() {
         routesDescription: form.routesDescription.trim() || undefined,
       });
       setSubmitted(true);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Submission failed. Please try again.');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Submission failed. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -87,7 +92,7 @@ export default function ApplyPage() {
           <p className="text-white font-semibold text-sm mb-1">Partner with TEGA.Rw</p>
           <p className="text-gray-400 text-xs leading-relaxed">
             Register your bus company to manage schedules, bookings, and revenue through our platform.
-            We'll review your application within 2–3 business days.
+            We&apos;ll review your application within 2–3 business days.
           </p>
         </div>
 

@@ -52,7 +52,7 @@ export default api;
 // ─── Typed helpers ───────────────────────────
 
 export const authApi = {
-  register: (data: { fullName: string; phoneNumber: string; email?: string; password: string }) =>
+  register: (data: { fullName: string; phoneNumber: string; email: string; password: string }) =>
     api.post('/auth/register', data),
   login: (data: { phoneNumber: string; password: string }) =>
     api.post('/auth/login', data),
@@ -107,11 +107,12 @@ export const bookingsApi = {
     seatId: string;
     passengerName: string;
     passengerPhone: string;
-    passengerEmail?: string;
+    passengerEmail: string;
+    specialAssistance?: boolean;
   }) => api.post('/bookings', data),
   createBatch: (data: {
     scheduleId: string;
-    passengers: { seatId: string; passengerName: string; passengerPhone: string; passengerEmail?: string }[];
+    passengers: { seatId: string; passengerName: string; passengerPhone: string; passengerEmail: string; specialAssistance?: boolean }[];
   }) => api.post('/bookings/batch', data),
   getSummary: (id: string) => api.get(`/bookings/${id}/summary`),
   getMyBookings: (params?: { page?: number; limit?: number; status?: string }) =>
@@ -123,6 +124,8 @@ export const bookingsApi = {
 export const paymentsApi = {
   initiate: (data: { bookingId: string; method: string; payerPhone: string }) =>
     api.post('/payments/initiate', data),
+  initiateGroup: (data: { bookingIds: string[]; method: string; payerPhone: string }) =>
+    api.post('/payments/initiate-batch', data),
   confirm: (paymentId: string) => api.post(`/payments/${paymentId}/confirm`),
   getByBooking: (bookingId: string) => api.get(`/payments/booking/${bookingId}`),
   getAll: (params?: object) => api.get('/payments', { params }),
