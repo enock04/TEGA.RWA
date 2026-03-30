@@ -164,7 +164,7 @@ export default function PaymentPage() {
           {/* Per-passenger breakdown for groups */}
           {isGroup && bookings.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-800 space-y-1.5">
-              {bookings.map((b, i) => (
+              {bookings.map((b) => (
                 <div key={b.id} className="flex justify-between text-sm">
                   <span className="text-gray-500">
                     {b.passenger_name} · Seat #{b.seat_number}

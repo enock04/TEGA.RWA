@@ -225,7 +225,7 @@ export default function BookingSummaryPage() {
         {/* Mixed: some confirmed, some still pending */}
         {overallStatus === 'pending' && bookings.some(b => b.status === 'confirmed') && (
           <div className="space-y-2">
-            {bookings.filter(b => b.status === 'confirmed').map((b, i) => (
+            {bookings.filter(b => b.status === 'confirmed').map((b) => (
               <Link key={b.id} href={`/ticket/${b.id}`} className="btn-secondary block text-center py-3.5">
                 View Ticket — {b.passenger_name}
               </Link>
