@@ -56,8 +56,8 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000,http:
   .map(o => o.trim())
   .filter(Boolean);
 
-// Allow Vercel preview deployments for known project slugs
-const vercelPreviewPattern = /^https:\/\/tega-rwa(-[a-z0-9]+)*(-[a-z0-9]+-ntwari-enocks-projects)?\.vercel\.app$/;
+// Allow any Vercel deployment for this project (preview + production)
+const vercelPreviewPattern = /^https:\/\/tega-rwa[a-z0-9-]*\.vercel\.app$/;
 
 app.use(cors({
   origin: (origin, cb) => {
