@@ -19,18 +19,38 @@ A mobile-first web application that enables passengers to search, book, and pay 
 | Multi-passenger booking | ✅ Complete | 1–8 passengers, per-seat selection, batch atomic booking |
 | Role-based isolation | ✅ Complete | JWT middleware enforces role per portal section |
 | Mobile money payment | ⚠️ Mocked | Flow and UI complete; real MTN MoMo / Airtel integration pending |
-| SMS (password reset) | ⚠️ Mocked | Token logged to console; Africa's Talking integration pending |
-| Email delivery | ⚠️ Mocked | Templates ready; SMTP credentials needed |
+| SMS notifications | ⚠️ Configured | Africa's Talking integrated; requires `AT_API_KEY` + `AT_USERNAME` on Render |
+| Email delivery | ✅ Live | Resend API integrated; requires `RESEND_API_KEY` on Render |
 | Phone OTP verification | ❌ Not started | Registration accepts any phone without verification |
 | HTTPS | ❌ Not configured | Must be handled at reverse proxy / load balancer in production |
 
 ---
 
+## Live Demo
+
+| App | URL |
+|-----|-----|
+| Passenger frontend | https://tega-rwa.vercel.app |
+| Staff Portal (admin & agency) | https://tega-rwa-staffportal.vercel.app |
+| Backend API | https://tega-rwa.onrender.com/api/v1 |
+
+### Staff Portal login credentials
+
+| Role | Phone | Password |
+|------|-------|----------|
+| Admin | `+250788000001` | `Tega@Admin2025` |
+| Agency | `+250788000002` | `Tega@Agency2025` |
+
+> The backend is hosted on Render's free tier — it sleeps after 15 minutes of inactivity. The first request after a sleep period may take up to 30 seconds to respond.
+
+---
+
 ## Table of Contents
 
+- [Live Demo](#live-demo)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [Quick Start](#quick-start)
+- [Running Locally](#running-locally)
 - [Deployment](#deployment)
 - [User Roles & Access](#user-roles--access)
 - [Passenger App](#passenger-app)
@@ -40,8 +60,6 @@ A mobile-first web application that enables passengers to search, book, and pay 
 - [Security](#security)
 - [Backend API Reference](#backend-api-reference)
 - [Test Data & Seed](#test-data--seed)
-- [Development (without Docker)](#development-without-docker)
-- [Rebuilding after changes](#rebuilding-after-changes)
 - [Known Limitations](#known-limitations)
 
 ---
@@ -82,27 +100,148 @@ Next.js middleware (edge runtime) enforces this boundary on every request — wr
 
 ---
 
-## Quick Start
+## Running Locally
 
-### Prerequisites
-- Docker Desktop installed and running
+### Option A — Docker (recommended, fewest steps)
 
-### Start everything locally
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
 
 ```bash
-git clone <repo-url>
+# 1. Clone the repository
+git clone https://github.com/enock04/TEGA.RWA.git
 cd TEGA.RWA
+
+# 2. Create the backend environment file
+cp backend/.env.example backend/.env
+# Edit backend/.env and fill in DB credentials, JWT secrets, and email keys
+
+# 3. Start all services
 docker compose up -d --build
 ```
 
-### Local URLs
+All three services start automatically. Visit:
 
-| App | URL | For |
-|-----|-----|-----|
-| Passenger | http://localhost:3000 | Customers buying tickets |
-| Staff Portal | http://localhost:3001 | Agency staff and system admins |
-| API | http://localhost:5000/api/v1 | — |
-| API Docs | http://localhost:5000/api/docs | Swagger UI |
+| App | URL |
+|-----|-----|
+| Passenger frontend | http://localhost:3000 |
+| Staff Portal | http://localhost:3001 |
+| Backend API | http://localhost:5000/api/v1 |
+| Swagger API docs | http://localhost:5000/api/docs |
+
+To stop: `docker compose down`
+
+---
+
+### Option B — Without Docker (manual setup)
+
+**Prerequisites:** Node.js 18+, PostgreSQL 15+
+
+#### 1. Clone the repo
+
+```bash
+git clone https://github.com/enock04/TEGA.RWA.git
+cd TEGA.RWA
+```
+
+#### 2. Set up the database
+
+```bash
+# Create a PostgreSQL database
+createdb ibtrs_db
+
+# Run all migrations in order
+psql -U postgres -d ibtrs_db -f backend/migrations/001_initial.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/002_seed.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/003_password_reset.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/004_security.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/005_more_schedules.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/006_agency_scoping.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/007_refunds_and_applications.sql
+psql -U postgres -d ibtrs_db -f backend/migrations/008_group_payments.sql
+```
+
+#### 3. Configure the backend
+
+```bash
+cd backend
+cp .env.example .env   # or create .env manually
+```
+
+Minimum required variables in `backend/.env`:
+
+```env
+NODE_ENV=development
+PORT=5000
+
+# PostgreSQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ibtrs_db
+DB_USER=postgres
+DB_PASSWORD=your_postgres_password
+
+# JWT (use strong random secrets in production)
+JWT_SECRET=change_me_to_a_long_random_string
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_SECRET=change_me_to_another_long_random_string
+JWT_REFRESH_EXPIRES_IN=30d
+
+# Email — Resend (https://resend.com, free tier: 3 000 emails/month)
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM=onboarding@resend.dev
+
+# SMS — Africa's Talking (https://africastalking.com, sandbox for testing)
+AT_API_KEY=your_at_api_key
+AT_USERNAME=sandbox
+AT_SENDER_ID=TEGA.Rw
+
+# CORS
+FRONTEND_URL=http://localhost:3000,http://localhost:3001
+```
+
+#### 4. Start the backend
+
+```bash
+cd backend
+npm install
+npm run dev          # starts on port 5000 with nodemon hot-reload
+```
+
+#### 5. Start the passenger frontend
+
+Open a new terminal:
+
+```bash
+cd frontend-passenger
+npm install
+npm run dev          # starts on port 3000
+```
+
+#### 6. Start the staff portal
+
+Open another terminal:
+
+```bash
+cd frontend-admin
+npm install
+npm run dev -- -p 3001   # starts on port 3001
+```
+
+#### Local URLs
+
+| App | URL |
+|-----|-----|
+| Passenger frontend | http://localhost:3000 |
+| Staff Portal | http://localhost:3001 |
+| Backend API | http://localhost:5000/api/v1 |
+| Swagger docs | http://localhost:5000/api/docs |
+
+#### Default staff credentials (seeded by `002_seed.sql`)
+
+| Role | Phone | Password |
+|------|-------|----------|
+| Admin | `+250788000001` | `Admin@1234` |
+| Agency | `+250788000002` | `Agency@1234` |
 
 ---
 
@@ -495,24 +634,7 @@ docker logs tega_rw_backend | grep "Password reset token"
 
 ---
 
-## Development (without Docker)
-
-```bash
-# Backend — hot-reload via nodemon
-cd backend && npm install && npm run dev       # port 5000
-
-# Passenger app
-cd frontend-passenger && npm install && npm run dev              # port 3000
-
-# Staff Portal (agency + admin)
-cd frontend-admin && npm install && npm run dev -- -p 3001       # port 3001
-```
-
-Create `backend/.env` with the variables listed in the Security section above.
-
----
-
-## Rebuilding after changes
+## Rebuilding after changes (Docker)
 
 ```bash
 # Rebuild a single service
@@ -530,15 +652,12 @@ docker compose up -d --build --force-recreate
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Real SMS (password reset) | Mocked | Token logged to console; integrate Africa's Talking or similar |
-| Real mobile money | Mocked | MTN MoMo and Airtel Money simulated; webhook handler is ready |
-| Email delivery | Mocked | Template built; needs SMTP credentials |
-| Phone number OTP verification | Not implemented | Registration accepts any phone without verification |
-| HTTPS enforcement | Not implemented | Handle at reverse proxy level in production |
+| Real mobile money | Mocked | MTN MoMo and Airtel Money flow is simulated; webhook handler is ready for real integration |
+| Phone OTP verification | Not implemented | Registration accepts any phone without OTP verification |
+| HTTPS enforcement | Not implemented | Handle at reverse proxy / load balancer level in production |
 | Shared cookie domain | Not configured | For production subdomains, set cookie domain to `.tega.rw` |
-| Agency data scoping | Not implemented | Agency dashboard, buses, bookings, and reports show system-wide data — no `agency_id` FK on `users` table yet; requires schema migration |
 | Bus delete for agency | Restricted | `DELETE /buses/:id` is admin-only; agency users can add and edit but not delete buses |
 
 ---
 
-*Last updated: March 2026 · MVP feature-complete · Unified Staff Portal (agency + admin in one app) · Backend on Render · Frontends on Vercel · CORS supports Vercel preview deployments · Core flows (search → book → pay → ticket) end-to-end functional*
+*Last updated: March 2026 · MVP feature-complete · Passenger app: https://tega-rwa.vercel.app · Staff portal: https://tega-rwa-staffportal.vercel.app · Backend: Render · Database: Supabase · Email: Resend · SMS: Africa's Talking*
