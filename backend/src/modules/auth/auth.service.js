@@ -67,9 +67,10 @@ const register = async ({ fullName, phoneNumber, email, password, role = 'passen
 
   // Fire-and-forget welcome email (only for passengers who provided an email)
   if (user.email) {
-    sendWelcomeEmail({ to: user.email, fullName: user.full_name }).catch(err =>
-      require('./../../utils/logger').warn(`[AUTH] Welcome email failed for ${user.email}: ${err.message}`)
-    );
+    sendWelcomeEmail({ to: user.email, fullName: user.full_name }).catch(err => {
+      const logger = require('./../../utils/logger');
+      logger.error(`[AUTH] Welcome email failed for ${user.email}: ${err.message}`, { stack: err.stack });
+    });
   }
 
   return { user, ...tokens };

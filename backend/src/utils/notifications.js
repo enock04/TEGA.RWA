@@ -19,11 +19,18 @@ const getSgMail = () => {
 const getTransporter = () => {
   if (_transporter) return _transporter;
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+  // Strip spaces from app passwords (Google displays them grouped but accepts either form)
+  const pass = process.env.SMTP_PASS.replace(/\s/g, '');
+  const port = parseInt(process.env.SMTP_PORT) || 587;
   _transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: parseInt(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    port,
+    secure: port === 465,
+    auth: { user: process.env.SMTP_USER, pass },
+    tls: { rejectUnauthorized: false },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
   return _transporter;
 };
