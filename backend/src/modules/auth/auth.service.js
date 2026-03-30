@@ -2,9 +2,20 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../../config/database');
+const { sendWelcomeEmail } = require('../../utils/notifications');
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
+
+// Normalise a Rwandan phone number to E.164 (+250XXXXXXXXX) for DB lookup.
+// Accepts: +250788…, 250788…, 0788…, 788… (9 digits)
+const normalisePhone = (phone) => {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('250') && digits.length === 12) return `+${digits}`;
+  if (digits.startsWith('0') && digits.length === 10) return `+250${digits.slice(1)}`;
+  if (digits.length === 9) return `+250${digits}`;
+  return phone;
+};
 
 const generateTokens = (userId, role) => {
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not configured');
@@ -24,7 +35,8 @@ const generateTokens = (userId, role) => {
 };
 
 const register = async ({ fullName, phoneNumber, email, password, role = 'passenger' }) => {
-  const phoneCheck = await query('SELECT id FROM users WHERE phone_number = $1', [phoneNumber]);
+  const normPhone = normalisePhone(phoneNumber.trim());
+  const phoneCheck = await query('SELECT id FROM users WHERE phone_number = $1 OR phone_number = $2', [phoneNumber.trim(), normPhone]);
   if (phoneCheck.rows.length) {
     const err = new Error('This phone number is already registered');
     err.statusCode = 409;
@@ -47,20 +59,31 @@ const register = async ({ fullName, phoneNumber, email, password, role = 'passen
     `INSERT INTO users (id, full_name, phone_number, email, password_hash, role)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, full_name, phone_number, email, role, created_at`,
-    [id, fullName, phoneNumber, email || null, passwordHash, role]
+    [id, fullName, normPhone, email || null, passwordHash, role]
   );
 
   const user = result.rows[0];
   const tokens = generateTokens(user.id, user.role);
+
+  // Fire-and-forget welcome email (only for passengers who provided an email)
+  if (user.email) {
+    sendWelcomeEmail({ to: user.email, fullName: user.full_name }).catch(err =>
+      require('./../../utils/logger').warn(`[AUTH] Welcome email failed for ${user.email}: ${err.message}`)
+    );
+  }
+
   return { user, ...tokens };
 };
 
 const login = async ({ phoneNumber, password }) => {
+  const normalisedPhone = normalisePhone(phoneNumber.trim());
+  // Try both the submitted value and the normalised E.164 form so users can
+  // log in with any format (0788…, +250788…, 250788…).
   const result = await query(
     `SELECT id, full_name, phone_number, email, password_hash, role, is_active,
             failed_login_attempts, locked_until
-     FROM users WHERE phone_number = $1`,
-    [phoneNumber]
+     FROM users WHERE phone_number = $1 OR phone_number = $2`,
+    [phoneNumber.trim(), normalisedPhone]
   );
 
   if (!result.rows.length) {

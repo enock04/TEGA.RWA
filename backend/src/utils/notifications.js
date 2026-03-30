@@ -199,10 +199,49 @@ const sendPasswordResetSMS = async (phoneNumber, resetToken) => {
   return sendSMS(phoneNumber, message);
 };
 
+const sendWelcomeEmail = async ({ to, fullName }) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head><style>
+      body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+      .card { background: white; border-radius: 12px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+      .header { background: #1a56db; color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 24px; }
+      .footer { text-align: center; color: #999; font-size: 12px; margin-top: 24px; }
+    </style></head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h1 style="margin:0 0 6px">Welcome to TEGA.Rw!</h1>
+          <p style="margin:0;opacity:.85">Rwanda's trusted inter-provincial bus ticketing platform</p>
+        </div>
+        <p>Hi <strong>${fullName}</strong>,</p>
+        <p>Your account has been successfully created. You can now search for routes, book seats, and manage your journeys entirely online.</p>
+        <p>To get started, visit <a href="https://tega-rwa.vercel.app">tega-rwa.vercel.app</a> and log in with your phone number.</p>
+        <p>If you have any questions, our support team is always here to help.</p>
+        <p>Safe travels,<br/><strong>The TEGA.Rw Team</strong></p>
+        <div class="footer">
+          <p>TEGA.Rw &mdash; Rwanda's trusted bus ticketing platform</p>
+          <p>For support: support@tega.rw | +250 700 000 000</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject: 'Welcome to TEGA.Rw — Your account is ready',
+    html,
+    text: `Hi ${fullName}, welcome to TEGA.Rw! Your account has been successfully created. Visit https://tega-rwa.vercel.app to book your first journey.`,
+  });
+};
+
 module.exports = {
   sendEmail,
   sendSMS,
   sendTicketEmail,
   sendBookingConfirmationSMS,
   sendPasswordResetSMS,
+  sendWelcomeEmail,
 };
