@@ -26,6 +26,7 @@ const getTransporter = () => {
     host: process.env.SMTP_HOST,
     port,
     secure: port === 465,
+    family: 4, // force IPv4 — Render does not route IPv6
     auth: { user: process.env.SMTP_USER, pass },
     tls: { rejectUnauthorized: false },
     connectionTimeout: 10000,
