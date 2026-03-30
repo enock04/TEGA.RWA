@@ -1,5 +1,13 @@
 const { query } = require('../../config/database');
 
+const normalisePhone = (phone) => {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('250') && digits.length === 12) return `+${digits}`;
+  if (digits.startsWith('0') && digits.length === 10) return `+250${digits.slice(1)}`;
+  if (digits.length === 9) return `+250${digits}`;
+  return phone;
+};
+
 const getProfile = async (userId) => {
   const result = await query(
     'SELECT id, full_name, phone_number, email, role, is_active, created_at, last_login_at FROM users WHERE id = $1',
@@ -107,13 +115,14 @@ const updateUser = async (userId, { fullName, email, role }) => {
   return result.rows[0];
 };
 
-const createAgent = async ({ fullName, phoneNumber, email, password, agencyId }) => {
+const createAgent = async ({ fullName, phoneNumber, email, password, agencyId, role = 'agency' }) => {
   const bcrypt = require('bcryptjs');
   const { v4: uuidv4 } = require('uuid');
 
+  const normPhone = normalisePhone(phoneNumber.trim());
   const existing = await query(
-    'SELECT id FROM users WHERE phone_number = $1',
-    [phoneNumber]
+    'SELECT id FROM users WHERE phone_number = $1 OR phone_number = $2',
+    [phoneNumber.trim(), normPhone]
   );
   if (existing.rows.length) {
     const err = new Error('Phone number already in use');
@@ -121,12 +130,15 @@ const createAgent = async ({ fullName, phoneNumber, email, password, agencyId })
     throw err;
   }
 
+  const allowedRoles = ['agency', 'admin'];
+  const assignedRole = allowedRoles.includes(role) ? role : 'agency';
+
   const passwordHash = await bcrypt.hash(password, 12);
   const result = await query(
     `INSERT INTO users (id, full_name, phone_number, email, password_hash, role, agency_id)
-     VALUES ($1, $2, $3, $4, $5, 'agency', $6)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, full_name, phone_number, email, role, agency_id, is_active, created_at`,
-    [uuidv4(), fullName, phoneNumber, email || null, passwordHash, agencyId || null]
+    [uuidv4(), fullName, normPhone, email || null, passwordHash, assignedRole, agencyId || null]
   );
   return result.rows[0];
 };

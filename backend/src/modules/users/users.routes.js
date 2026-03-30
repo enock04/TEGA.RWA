@@ -45,6 +45,7 @@ router.post('/agents',
     body('phoneNumber').trim().matches(/^\+?[0-9]{10,15}$/).withMessage('Valid phone number required'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters').matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and number'),
     body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail(),
+    body('role').optional().isIn(['agency', 'admin']).withMessage('Role must be agency or admin'),
   ],
   validate,
   controller.createAgent

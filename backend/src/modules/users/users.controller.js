@@ -56,9 +56,9 @@ const updateUser = async (req, res, next) => {
 
 const createAgent = async (req, res, next) => {
   try {
-    const { fullName, phoneNumber, email, password } = req.body;
-    const user = await usersService.createAgent({ fullName, phoneNumber, email, password });
-    return success(res, { user }, 'Agent created successfully');
+    const { fullName, phoneNumber, email, password, role } = req.body;
+    const user = await usersService.createAgent({ fullName, phoneNumber, email, password, role });
+    return success(res, { user }, `${role === 'admin' ? 'Admin' : 'Agency'} account created successfully`);
   } catch (err) {
     next(err);
   }

@@ -161,7 +161,7 @@ export const usersApi = {
   getAll: (params?: object) => api.get('/users', { params }),
   toggleStatus: (id: string, isActive: boolean) =>
     api.patch(`/users/${id}/status`, { isActive }),
-  createAgent: (data: { fullName: string; phoneNumber: string; password: string; email?: string }) =>
+  createAgent: (data: { fullName: string; phoneNumber: string; password: string; email?: string; role?: string }) =>
     api.post('/users/agents', data),
   updateUser: (id: string, data: { fullName?: string; email?: string; role?: string }) =>
     api.put(`/users/${id}`, data),

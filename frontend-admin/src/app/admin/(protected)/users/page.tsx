@@ -8,7 +8,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { usersApi } from '@/lib/api';
 import { User } from '@/types';
 
-const EMPTY_FORM = { fullName: '', phoneNumber: '', email: '', password: '' };
+const EMPTY_FORM = { fullName: '', phoneNumber: '', email: '', password: '', role: 'agency' };
 const EMPTY_EDIT = { fullName: '', email: '', role: '' };
 
 export default function AdminUsersPage() {
@@ -83,12 +83,13 @@ export default function AdminUsersPage() {
       const res = await usersApi.createAgent({
         fullName: form.fullName, phoneNumber: form.phoneNumber,
         password: form.password, email: form.email || undefined,
+        role: form.role,
       });
       setUsers(u => [res.data.data.user, ...u]);
       setTotal(t => t + 1);
       setForm(EMPTY_FORM);
       setShowForm(false);
-      toast.success('Agent created successfully');
+      toast.success(`${form.role === 'admin' ? 'Admin' : 'Agency'} account created successfully`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to create agent');
     } finally { setSaving(false); }
@@ -114,8 +115,16 @@ export default function AdminUsersPage() {
       {/* Add Agent Form */}
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6 shadow-card">
-          <h2 className="font-semibold text-gray-800 mb-4">New Agency Account</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">New Staff Account</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label-admin">Role *</label>
+              <select className="input-admin" title="Role" value={form.role}
+                onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                <option value="agency">Agency</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
             <div>
               <label className="label-admin">Full Name *</label>
               <input className="input-admin" placeholder="e.g. John Doe" value={form.fullName}
@@ -133,13 +142,13 @@ export default function AdminUsersPage() {
             </div>
             <div>
               <label className="label-admin">Password *</label>
-              <input className="input-admin" type="password" placeholder="Min. 8 characters" value={form.password}
+              <input className="input-admin" type="password" placeholder="Min. 8 chars, upper+lower+number" value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
             </div>
           </div>
           <div className="flex gap-3 mt-4">
             <button type="button" onClick={handleCreateAgent} disabled={saving} className="btn-admin-primary flex items-center gap-2">
-              {saving && <Spinner size="sm" />} Create Agent
+              {saving && <Spinner size="sm" />} Create {form.role === 'admin' ? 'Admin' : 'Agency'} Account
             </button>
             <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }} className="btn-admin-secondary">Cancel</button>
           </div>
