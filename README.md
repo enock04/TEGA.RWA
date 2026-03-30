@@ -61,6 +61,7 @@ A mobile-first web application that enables passengers to search, book, and pay 
 - [Backend API Reference](#backend-api-reference)
 - [Test Data & Seed](#test-data--seed)
 - [Known Limitations](#known-limitations)
+- [Acknowledgements](#acknowledgements)
 
 ---
 
@@ -657,6 +658,19 @@ docker compose up -d --build --force-recreate
 | HTTPS enforcement | Not implemented | Handle at reverse proxy / load balancer level in production |
 | Shared cookie domain | Not configured | For production subdomains, set cookie domain to `.tega.rw` |
 | Bus delete for agency | Restricted | `DELETE /buses/:id` is admin-only; agency users can add and edit but not delete buses |
+
+---
+
+## Acknowledgements
+
+Backend integration — including API design, service logic, email/SMS delivery, CORS configuration, group payment chaining, ticket issuance, and deployment troubleshooting — was developed with the assistance of [Claude](https://claude.ai) (Anthropic). Claude contributed to numerous commits across the backend codebase, covering areas such as:
+
+- JWT authentication and role-based access control
+- Multi-passenger atomic booking and group payment flow
+- Ticket generation and QR-code email delivery (Resend + Africa's Talking)
+- IPv4 SMTP fix for Render cloud hosting
+- Phone number normalisation for Rwandan number formats
+- CORS configuration for Vercel preview deployments
 
 ---
 
