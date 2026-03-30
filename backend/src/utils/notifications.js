@@ -2,10 +2,20 @@ const nodemailer = require('nodemailer');
 const logger = require('./logger');
 
 // ─── Email ────────────────────────────────────────────────────────────────────
-// Priority: SendGrid Web API (if SENDGRID_API_KEY set) → SMTP (nodemailer fallback)
+// Priority: Resend API → SendGrid API → SMTP (nodemailer fallback)
 
+let _resend = null;
 let _sgMail = null;
 let _transporter = null;
+
+const getResend = () => {
+  if (_resend) return _resend;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  const { Resend } = require('resend');
+  _resend = new Resend(apiKey);
+  return _resend;
+};
 
 const getSgMail = () => {
   if (_sgMail) return _sgMail;
@@ -19,14 +29,13 @@ const getSgMail = () => {
 const getTransporter = () => {
   if (_transporter) return _transporter;
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-  // Strip spaces from app passwords (Google displays them grouped but accepts either form)
   const pass = process.env.SMTP_PASS.replace(/\s/g, '');
   const port = parseInt(process.env.SMTP_PORT) || 587;
   _transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port,
     secure: port === 465,
-    family: 4, // force IPv4 — Render does not route IPv6
+    family: 4,
     auth: { user: process.env.SMTP_USER, pass },
     tls: { rejectUnauthorized: false },
     connectionTimeout: 10000,
@@ -38,13 +47,44 @@ const getTransporter = () => {
 
 const sendEmail = async ({ to, subject, html, text, attachments }) => {
   const FROM = process.env.EMAIL_FROM || 'noreply@tega.rw';
+  const FROM_NAME = 'TEGA.Rw';
+
+  // ── Resend (HTTP API — works on all cloud platforms) ──
+  const resend = getResend();
+  if (resend) {
+    try {
+      const payload = {
+        from: `${FROM_NAME} <${FROM}>`,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html: html || '',
+        text: text || '',
+      };
+      if (attachments?.length) {
+        payload.attachments = attachments.map(a => ({
+          filename: a.filename,
+          content: a.content,
+        }));
+      }
+      const { data, error } = await resend.emails.send(payload);
+      if (error) {
+        logger.error(`[EMAIL] Resend failed for ${to}: ${error.message}`);
+        throw new Error(error.message);
+      }
+      logger.info(`[EMAIL] Sent via Resend to ${to} — id: ${data.id}`);
+      return { messageId: data.id };
+    } catch (err) {
+      logger.error(`[EMAIL] Resend error for ${to}: ${err.message}`);
+      throw err;
+    }
+  }
 
   // ── SendGrid Web API ──
   const sg = getSgMail();
   if (sg) {
     const msg = {
       to,
-      from: { name: 'TEGA.Rw', email: FROM },
+      from: { name: FROM_NAME, email: FROM },
       subject,
       html,
       text: text || '',
@@ -101,46 +141,69 @@ const sendEmail = async ({ to, subject, html, text, attachments }) => {
   }
 };
 
-// ─── SMS (Twilio) ─────────────────────────────────────────────────────────────
+// ─── SMS ──────────────────────────────────────────────────────────────────────
+// Priority: Africa's Talking (AT_API_KEY) → Twilio (TWILIO_ACCOUNT_SID) → log-only
 
+let _atSMS = null;
 let _twilioClient = null;
+
+const getAtSMS = () => {
+  if (_atSMS) return _atSMS;
+  const apiKey = process.env.AT_API_KEY;
+  const username = process.env.AT_USERNAME;
+  if (!apiKey || !username || apiKey === 'mock_sms_key') return null;
+  const AT = require('africastalking')({ apiKey, username });
+  _atSMS = AT.SMS;
+  return _atSMS;
+};
 
 const getTwilioClient = () => {
   if (_twilioClient) return _twilioClient;
-
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
-
-  if (!accountSid || !authToken || accountSid.startsWith('AC_mock')) {
-    return null;
-  }
-
+  if (!accountSid || !authToken || accountSid.startsWith('AC_mock')) return null;
   _twilioClient = require('twilio')(accountSid, authToken);
   return _twilioClient;
 };
 
 const sendSMS = async (phoneNumber, message) => {
+  // ── Africa's Talking ──
+  const atSMS = getAtSMS();
+  if (atSMS) {
+    try {
+      const result = await atSMS.send({
+        to: [phoneNumber],
+        message,
+        from: process.env.AT_SENDER_ID || 'TEGA.Rw',
+      });
+      const r = result.SMSMessageData?.Recipients?.[0];
+      logger.info(`[SMS] Sent via AT to ${phoneNumber} — status: ${r?.status}, cost: ${r?.cost}`);
+      return result;
+    } catch (err) {
+      logger.error(`[SMS] Africa's Talking failed for ${phoneNumber}: ${err.message}`);
+      throw err;
+    }
+  }
+
+  // ── Twilio ──
   const client = getTwilioClient();
-
-  if (!client) {
-    logger.warn(`[SMS] Twilio not configured — logging only. To: ${phoneNumber}`);
-    logger.info(`[SMS] Message: ${message}`);
-    return { status: 'not_sent', sid: `no-sms-${Date.now()}` };
+  if (client) {
+    try {
+      const result = await client.messages.create({
+        to: phoneNumber,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        body: message,
+      });
+      logger.info(`[SMS] Sent via Twilio to ${phoneNumber} — SID: ${result.sid}`);
+      return result;
+    } catch (err) {
+      logger.error(`[SMS] Twilio failed for ${phoneNumber}: ${err.message}`);
+      throw err;
+    }
   }
 
-  try {
-    const result = await client.messages.create({
-      to: phoneNumber,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      body: message,
-    });
-
-    logger.info(`[SMS] Sent to ${phoneNumber} — SID: ${result.sid}, status: ${result.status}`);
-    return result;
-  } catch (err) {
-    logger.error(`[SMS] Failed to send to ${phoneNumber}:`, err.message);
-    throw err;
-  }
+  logger.warn(`[SMS] No SMS provider configured — logging only. To: ${phoneNumber} | ${message}`);
+  return { status: 'not_sent', sid: `no-sms-${Date.now()}` };
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
